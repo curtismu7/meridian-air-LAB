@@ -38,10 +38,11 @@ export default function UseCasePicker({ catalog, selectedId, onPick, failed = fa
   const found = tracks.reduce((n, t) => n + t.shown.length, 0);
   return (
     <section className="pick" aria-label={label} data-testid="picker">
-      <label className="field">Search the {catalog?.total ?? 11} use cases
+      <p className="muted pick__intro" data-testid="picker-intro">Pick the one that matters to your prospect — any scene, any order. Each runs on its own.</p>
+      <label className="field">Search the {catalog?.total ?? 11} scenes
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="id, title, tool, flag, outcome..." data-testid="search" autoComplete="off" />
       </label>
-      <p className="muted" role="status" aria-live="polite" data-testid="search-count">{!catalog && failed ? "Use cases unavailable" : q ? `${found} of ${catalog?.total ?? 11} match` : keep ? `${found} of ${catalog?.total ?? 11} shown` : `${catalog?.total ?? 11} use cases in 7 tracks`}</p>
+      <p className="muted" role="status" aria-live="polite" data-testid="search-count">{!catalog && failed ? "Use cases unavailable" : q ? `${found} of ${catalog?.total ?? 11} match` : keep ? `${found} of ${catalog?.total ?? 11} shown` : `${catalog?.total ?? 11} scenes in 7 tracks`}</p>
       {!catalog && (failed ? <p className="muted" data-testid="catalog-failed">The use cases could not be loaded. Is the server running?</p> : <p className="muted">Loading the use cases...</p>)}
       {tracks.map((t) => (t.shown.length === 0 ? null : (
         <details key={t.track} className="pick__track" open={q ? true : openTracks.has(t.track)} onToggle={(e) => { const isOpen = e.currentTarget.open; if (!q) setOpenTracks((cur) => { const next = new Set(cur); if (isOpen) next.add(t.track); else next.delete(t.track); return next; }); }} data-testid={`track-${t.track}`}>

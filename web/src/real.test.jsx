@@ -113,7 +113,9 @@ describe("REAL / MOCK labels and the replies", () => {
     expect(within(turn).getByTestId("turn-answer-text").textContent).toMatch(/^Authorize denied this request \(HTTP 403/);
     expect(within(turn).getByTestId("turn-outcome").textContent).toBe("REAL_DENY");
     const srcs = within(screen.getByTestId("hop-sources")).getAllByTestId("hop-source").map((x) => x.getAttribute("data-source"));
-    expect(srcs).toEqual(["real", "real", "real", "real", "real", "real", "not-run", "not-run", "not-run"]);
+    expect(srcs).toEqual(["real", "real", "real", "real", "real", "real"]); // the run list holds only the hops that ran
+    expect(screen.getByTestId("hop-sources-count").textContent).toMatch(/6 hops ran: 6 REAL/);
+    expect(within(screen.getByTestId("hop-sources-skipped")).getAllByRole("listitem")).toHaveLength(3);
   });
 
   test("a delegated token with no act claim stops before the gateway: the reply says so, the exchange-2 token is flagged NO act claim, the gateway hops say NOT RUN", async () => {
@@ -125,7 +127,7 @@ describe("REAL / MOCK labels and the replies", () => {
     expect(within(turn).getByTestId("turn-answer-text").textContent).toMatch(/the delegated token carries no act claim: check the agent:invoke resource's act attribute/);
     expect(within(turn).getByTestId("turn-outcome").textContent).toBe("REAL_NO_ACT");
     const srcs = within(screen.getByTestId("hop-sources")).getAllByTestId("hop-source");
-    expect(srcs.map((x) => x.getAttribute("data-source"))).toEqual(["real", "real", "real", "real", "not-run", "not-run", "not-run", "not-run", "not-run"]);
+    expect(srcs.map((x) => x.getAttribute("data-source"))).toEqual(["real", "real", "real", "real"]);
     expect(srcs[3].textContent).toMatch(/Exchange 2: for the gateway/);
     expect(screen.getAllByTestId("token-act")).toHaveLength(1); // exchange 1 has act
     expect(within(screen.getAllByTestId("token")[3]).getByTestId("token-no-act").textContent).toBe("NO act claim");

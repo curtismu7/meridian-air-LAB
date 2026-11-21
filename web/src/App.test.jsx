@@ -89,7 +89,7 @@ describe("use case picker", () => {
   test("search narrows the list and says how many match; no match gives an honest message", async () => {
     await boot();
     const u = userEvent.setup();
-    expect(screen.getByTestId("search-count").textContent).toBe("11 use cases in 7 tracks");
+    expect(screen.getByTestId("search-count").textContent).toBe("11 scenes in 7 tracks");
     await search(u, "refund");
     expect(screen.queryByTestId("uc-MA1")).toBeNull();
     expect(screen.getByTestId("uc-MA6")).toBeTruthy();
@@ -99,7 +99,7 @@ describe("use case picker", () => {
     await search(u, "nothing-like-this");
     expect(screen.getByTestId("no-match")).toBeTruthy();
     await search(u, "");
-    expect(screen.getByTestId("search-count").textContent).toBe("11 use cases in 7 tracks");
+    expect(screen.getByTestId("search-count").textContent).toBe("11 scenes in 7 tracks");
   });
 
   test("a search hit inside a collapsed track opens that track", async () => {

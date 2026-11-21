@@ -101,6 +101,9 @@ export default function App() {
   const presenter = cfg.presenter;
   const [talkOpen, setTalkOpen] = useState(false);
   const setPresenter = useCallback((f) => setCfg((c) => ({ ...c, presenter: typeof f === "function" ? f(c.presenter) : f })), []);
+  // The setup sidebar can be collapsed (chat and evidence get the room). Presenter mode hides it entirely; collapse is a lighter version of the same.
+  const sidebarOpen = !cfg.presenter && cfg.sidebar !== "collapsed";
+  const toggleSidebar = useCallback(() => setCfg((c) => ({ ...c, sidebar: c.sidebar === "collapsed" ? null : "collapsed" })), []);
   useEffect(() => { saveConfig(workspaceId(), cfg); }, [cfg]);
   useEffect(() => { applyTheme(theme); }, [theme]);
   const setTheme = (t) => { setThemeState(t); try { window.localStorage.setItem(THEME_KEY, t); } catch { /* storage blocked */ } };
@@ -396,13 +399,20 @@ export default function App() {
               run={evRun} running={running} selHop={selHop} onSelect={setSelHop} verticalSelect={verticalSelect} />
           )}
           {current === "agent" && !page && (
-            <div className="agno" data-several={several ? "true" : undefined}>
-              {!presenter && (
+            <div className="agno" data-several={several ? "true" : undefined} data-sidebar={sidebarOpen ? "open" : "collapsed"}>
+              {!presenter && sidebarOpen && (
                 <SetupSidebar onNewChat={() => { dropPick(); setTurns([]); setSelHop(null); }} mode={mode} host={cast.castHost} several={several} setSeveral={setSeveral} agent={cast.castAgent}
                   vertical={vertical} verticals={verticals} onVertical={setVertical} sessions={sessions} onSession={pick}
                   brain={cfg.brain} brainInfo={brainInfo} onBrain={(b) => setCfg((c) => ({ ...c, brain: b }))}>
                   <UseCasePicker catalog={catalog} selectedId={selectedId} onPick={pick} failed={!catalog && !!error} keep={several ? isHandoff : null} />
                 </SetupSidebar>
+              )}
+              {!presenter && (
+                <button type="button" className="setup-toggle" onClick={toggleSidebar} data-testid="sidebar-toggle"
+                  aria-expanded={sidebarOpen} aria-controls="setup"
+                  title={sidebarOpen ? "Hide the setup panel" : "Show the setup panel"}>
+                  {sidebarOpen ? "◀" : "▶"}<span className="visually-hidden">{sidebarOpen ? "Hide the setup panel" : "Show the setup panel"}</span>
+                </button>
               )}
               <div className="work">
                 <AgentColumn agent={cast.castAgent} brand={cast.castBrand} userId={userId} vertical={vertical} verticalLabel={verticalLabel} stub={stub} prompts={prompts} turns={shownTurns}

@@ -75,6 +75,17 @@
   .agno { grid-template-columns: 270px minmax(0, 1fr); }
   .setup { position: sticky; top: 8px; max-height: max(420px, calc(100vh - 196px)); overflow-y: auto; }
 }
+/* sidebar collapsed: chat and evidence get the room; the toggle floats at the panel's old edge */
+.agno[data-sidebar="collapsed"] { grid-template-columns: minmax(0, 1fr); }
+.setup-toggle {
+  align-self: start; position: sticky; top: 8px; width: 26px; height: 52px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-body);
+  cursor: pointer; font-size: 12px; padding: 0; z-index: 2;
+}
+.setup-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.agno[data-sidebar="collapsed"] .setup-toggle { position: fixed; left: 8px; top: 50%; transform: translateY(-50%); border-radius: 0 8px 8px 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .app[data-presenter] .agno { grid-template-columns: minmax(0, 1fr); }
 
 .work { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; min-width: 0; }
@@ -145,6 +156,14 @@
 .evcol__panel { display: grid; gap: 10px; min-width: 0; }
 .evsum { display: grid; gap: 10px; }
 .evwhy .kicker { margin-top: 0; }
+/* the hop-sources details: a one-line summary until opened; the per-hop list only on demand */
+details.evwhy { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+details.evwhy > summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+details.evwhy > summary::-webkit-details-marker { display: none; }
+details.evwhy > summary::before { content: "▸"; font-size: 11px; color: var(--text-muted); }
+details.evwhy[open] > summary::before { content: "▾"; }
+details.evwhy > .steps, details.evwhy > .plain, details.evwhy > .muted { margin: 8px 0 0; }
+details.evwhy > .kicker:not(summary .kicker) { margin-top: 12px; }
 .evsum__carry { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
 @media (max-width: 900px) { .evsum__carry { grid-template-columns: 1fr; } }
 .evsum__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
