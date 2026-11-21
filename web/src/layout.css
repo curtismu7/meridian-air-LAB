@@ -72,7 +72,9 @@
 .sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .sessions__item { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; padding: 4px 8px; min-height: 36px; font-size: 12px; text-align: left; }
 @media (min-width: 900px) {
-  .agno { grid-template-columns: 270px minmax(0, 1fr); }
+  /* three children when the toggle is shown: sidebar | toggle | work */
+  .agno:has(.setup-toggle) { grid-template-columns: 270px auto minmax(0, 1fr); }
+  .agno:not(:has(.setup-toggle)) { grid-template-columns: 270px minmax(0, 1fr); }
   .setup { position: sticky; top: 8px; max-height: max(420px, calc(100vh - 196px)); overflow-y: auto; }
 }
 /* sidebar collapsed: chat and evidence get the room; the toggle floats at the panel's old edge */
