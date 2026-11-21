@@ -56,47 +56,8 @@ export function HandoffSummary({ uc, catalog, vertical, userId }) {
   );
 }
 
-// Where each hop of this run ran: REAL (a real server), MOCK (this lab's engine) or NOT RUN, one tag per hop (rule 19: never mixed within a hop).
-// The flat numbered list was noise (owner, 2026-11-21): the summary counts by source and the <details> holds the per-hop list, not-run hops last.
-export function HopSources({ run }) {
-  const hops = run?.hops || [];
-  if (!hops.length) return null;
-  const real = run.kind === "real" || run.kind === "live";
-  const src = (h) => h.source || (h.mock ? "mock" : real ? "real" : "mock");
-  const ran = hops.filter((h) => src(h) !== "not-run");
-  const counts = ran.reduce((m, h) => { const s = src(h); m[s] = (m[s] || 0) + 1; return m; }, {});
-  const summary = ran.length
-    ? `${ran.length} hop${ran.length === 1 ? "" : "s"} ran: ` + ["real", "mock"].filter((s) => counts[s]).map((s) => `${counts[s]} ${s === "real" ? "REAL" : "MOCK"}`).join(" + ")
-    : "no hops ran";
-  return (
-    <details className="evwhy" data-testid="hop-sources" open={ran.length > 0 && ran.length === hops.length ? undefined : false}>
-      <summary data-testid="hop-sources-summary">
-        <span className="kicker">Where each hop ran</span> <span className="muted" data-testid="hop-sources-count">{summary}</span>
-      </summary>
-      {run.realGate && run.realGate.real === false && <p className="muted" data-testid="hop-sources-why">Real mode, but this use case runs Mock: {visible(run.realGate.reason)}.</p>}
-      {run.kind === "live" && <p className="muted">Real, identity provider only: two calls with the old worker client, nothing past the identity provider.</p>}
-      <ol className="steps">
-        {ran.map((h) => (
-          <li key={`${h.n}-${h.kind}`} data-testid="hop-source" data-source={src(h)}>
-            <span className="steps__n">{h.n}</span> {visible(h.title || h.kind)} <SourceTag source={src(h)} />
-          </li>
-        ))}
-      </ol>
-      {ran.length < hops.length && (
-        <>
-          <p className="kicker">Not in this run ({hops.length - ran.length})</p>
-          <ul className="plain" data-testid="hop-sources-skipped">
-            {hops.filter((h) => src(h) === "not-run").map((h) => (
-              <li key={`${h.n}-${h.kind}`}>{visible(h.title || h.kind)}</li>
-            ))}
-          </ul>
-        </>
-      )}
-    </details>
-  );
-}
-
 // `children`: the selected use case's panel (inputs, persona, Run and the raw result), at the bottom of the column (owner, 2026-11-09).
+// 'Where each hop ran' (HopSources) was removed entirely (owner, 2026-11-21): the sequence/reel steps already carry their REAL/MOCK tags; a second per-hop list was noise.
 export default function EvidenceColumn({ run, selHop, onSelect, config, onTab, onFull, vertical, resetSignal, lastRun, uc, catalog, userId, showHandoff, why, children }) {
   const hops = run?.hops || [];
   const tabs = VIEWS.filter((v) => DIAGRAMS.includes(v) || config.views.tokens === "embedded");
@@ -114,7 +75,6 @@ export default function EvidenceColumn({ run, selHop, onSelect, config, onTab, o
           {/* A Here + go deeper use case: the lab that covers this run in depth (moved out of the chat, owner 2026-11-09). */}
           {run && uc && run.useCase?.id === uc.id && <GoDeeper uc={uc} vertical={vertical} userId={userId} />}
           {run && <Why steps={why} testId="evidence-why" />}
-          {run && <HopSources run={run} />}
           {/* A segmented control, not a second tablist: the page's tabpanel is the agent area itself. Pressed = the view on show. */}
           <div className="evtabs seg" role="group" aria-label="Evidence view" data-testid="evidence-tabs">
             {tabs.map((v) => (
