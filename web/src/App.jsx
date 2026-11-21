@@ -21,6 +21,7 @@ import ShelfLink from "./components/ShelfLink.jsx";
 import VerifyMark from "./components/VerifyMark.jsx";
 import SignInDialog from "./components/SignInDialog";
 import ControlPlaneRail from "./components/ControlPlaneRail";
+import PrivilegeConsole from "./components/PrivilegeConsole";
 import TopMenu from "./top-menu/TopMenu.jsx";
 import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import "./top-menu/top-menu.css";
@@ -33,6 +34,7 @@ export const BASE_NAV = [
   { id: "runs", label: "Run history" },
   { id: "diagram", label: "Diagram" },
   { id: "talk", label: "Talk track" },
+  { id: "console", label: "Privilege Console" },
 ];
 const EXTRA_PREFIX = "page-";
 // Full-page evidence views of the agent area (#sequence, #reel): the nav keeps Agent selected.
@@ -441,6 +443,7 @@ export default function App() {
           {current === "runs" && <RunHistory refresh={runCount} />}
           {current === "diagram" && <DiagramView vertical={vertical} resetSignal={resetSignal} lastRun={last} />}
           {current === "talk" && (story ? <TalkTrack talk={story.talkTrack} /> : <p className="muted">{error ? "The talk track could not be loaded." : "Loading..."}</p>)}
+          {current === "console" && <PrivilegeConsole catalog={catalog} selectedId={selectedId} onPickScene={(id) => { select("agent"); pick(id); const u = allUc.find((x) => x.id === id); if (u) startRun(u, null, personaFor(u) || persona); }} />}
           {extraKey && opened[extraKey] && <ExtraPage opens={extraKey} entry={opened[extraKey]} />}
         </div>
       </main>

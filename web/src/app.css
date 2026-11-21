@@ -104,3 +104,12 @@ summary { cursor: pointer; font-weight: 700; font-size: 14px; }
   .dhint { display: block; }
   .seg { gap: 4px; }
 }
+
+/* Privilege Console walkthrough (the mock's console view) */
+.pconsole { display: grid; gap: 10px; }
+.pconsole__grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .pconsole__grid { grid-template-columns: 1fr 1fr; } }
+.pconsole__card { display: grid; gap: 8px; align-content: start; }
+.pconsole__why { margin: 0; }
+.pconsole__scenes { display: flex; flex-wrap: wrap; gap: 8px; }
+.pconsole__scenes button { min-height: 32px; padding: 3px 12px; font-size: 12px; }

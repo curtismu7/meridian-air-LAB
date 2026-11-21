@@ -56,7 +56,7 @@ describe("header, banner and side nav", () => {
     await boot();
     const tabs = within(screen.getByTestId("nav")).getAllByRole("tab").map((t) => t.textContent);
     expect(tabs).toEqual(BASE_NAV.map((n) => n.label));
-    expect(tabs).toEqual(["Agent", "Run history", "Diagram", "Talk track"]);
+    expect(tabs).toEqual(["Agent", "Run history", "Diagram", "Talk track", "Privilege Console"]);
     const id = screen.getByTestId("workspace").textContent.replace("Workspace: ", "");
     expect(api.calls.length).toBeGreaterThan(2);
     for (const c of api.calls) expect(c.headers["x-workspace"]).toBe(id);
@@ -261,13 +261,13 @@ describe("extra pages (opens)", () => {
     await search(u, "everyone");
     await u.click(screen.getByTestId("uc-MA7"));
     await runIt(u);
-    expect(within(screen.getByTestId("nav")).getAllByRole("tab")).toHaveLength(4);
+    expect(within(screen.getByTestId("nav")).getAllByRole("tab")).toHaveLength(5);
     expect(screen.queryByTestId("nav-more")).toBeNull();
     await search(u, "");
     await u.click(screen.getByTestId("uc-MA4"));
     await runIt(u);
     // the tabs stay the agent's four areas; the extra page joins the one More menu beside them (the shell bar stays one row)
-    expect(within(screen.getByTestId("nav")).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Agent", "Run history", "Diagram", "Talk track"]);
+    expect(within(screen.getByTestId("nav")).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Agent", "Run history", "Diagram", "Talk track", "Privilege Console"]);
     const more = screen.getByTestId("nav-more");
     expect([...more.options].map((o) => o.textContent)).toEqual(["More (1)", "Agent to agent"]);
     expect(screen.getByTestId("nav-page-a2a").value).toBe("page-a2a");
