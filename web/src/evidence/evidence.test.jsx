@@ -155,7 +155,8 @@ describe("movie reel", () => {
   test("one frame per hop with number, lane, title, the one fact and a status word; clicking a frame opens its detail", () => {
     render(<Harness hops={UC1_RUN} view="reel" />);
     const f4 = screen.getByTestId("frame-4");
-    expect(f4.textContent).toBe("4Mock IdPExchangescope narrowed 4 → 1done");
+    // the frame ends with the status word and then the § spec chip (the approved mock's look)
+    expect(f4.textContent).toMatch(/^4Mock IdPExchangescope narrowed 4 → 1done(§ .+)?$/);
     fireEvent.click(f4);
     expect(f4.getAttribute("aria-current")).toBe("step");
     expect(detail().getAttribute("aria-label")).toBe("Step 4 detail");

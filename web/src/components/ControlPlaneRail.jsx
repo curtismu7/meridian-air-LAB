@@ -32,6 +32,14 @@ export default function ControlPlaneRail({ uc }) {
         })}
       </ol>
       {!uc && <p className="muted">Pick a scene to see which layers it exercises.</p>}
+      {uc && (
+        <>
+          <p className="kicker">Talk track</p>
+          <p className="cprail__talk" data-testid="cp-talk">“{uc.buyerStory}”</p>
+          <p className="kicker">Why it matters</p>
+          <p className="cprail__talk" data-testid="cp-why">{uc.pingOneSolution}</p>
+        </>
+      )}
     </aside>
   );
 }

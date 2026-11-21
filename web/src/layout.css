@@ -91,6 +91,7 @@
 .cprail__layer[data-hot] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .cprail__layer::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent-inactive); }
 .cprail__layer[data-hot]::before { background: var(--accent); }
+.cprail__talk { margin: 0; font-size: 12.5px; color: var(--text-body); }
 @media (max-width: 1279px) { .agno:has(.cprail) .cprail { grid-column: 1 / -1; } } /* narrow: the rail flows under, still readable */
 /* sidebar collapsed: chat and evidence get the room; the toggle floats at the panel's old edge */
 .agno[data-sidebar="collapsed"] { grid-template-columns: minmax(0, 1fr); }

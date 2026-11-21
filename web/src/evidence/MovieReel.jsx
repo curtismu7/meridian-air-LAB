@@ -84,6 +84,10 @@ export default function MovieReel({ hops = [], selected = null, onSelect }) {
                 <b className="rl-f__t">{txt(h.title)}</b>
                 {density === "detailed" && h.fact && <span className="rl-f__fact">{txt(h.fact)}</span>}
                 <span className="rl-f__st">{verdictWord(h.verdict)}</span>
+                {/* § spec chip, from the approved mock: the first ref label of the hop's spec (e.g. "RFC 6749 §4.1") */}
+                {density === "detailed" && Array.isArray(h.spec?.refs) && h.spec.refs[0]?.label && (
+                  <span className="rl-f__spec" title={(h.spec.refs.map((r) => r?.label).filter(Boolean).join(" · "))}>§ {h.spec.refs[0].label}</span>
+                )}
               </button>
             </li>
           );
