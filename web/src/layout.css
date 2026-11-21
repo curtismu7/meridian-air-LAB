@@ -72,11 +72,26 @@
 .sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .sessions__item { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; padding: 4px 8px; min-height: 36px; font-size: 12px; text-align: left; }
 @media (min-width: 900px) {
-  /* three children when the toggle is shown: sidebar | toggle | work */
-  .agno:has(.setup-toggle) { grid-template-columns: 270px auto minmax(0, 1fr); }
-  .agno:not(:has(.setup-toggle)) { grid-template-columns: 270px minmax(0, 1fr); }
+  /* three children when the toggle is shown: sidebar | toggle | work | control-plane rail */
+  .agno:has(.setup-toggle):has(.cprail) { grid-template-columns: 270px auto minmax(0, 1fr) 250px; }
+  .agno:has(.setup-toggle):not(:has(.cprail)) { grid-template-columns: 270px auto minmax(0, 1fr); }
+  .agno:not(:has(.setup-toggle)):has(.cprail) { grid-template-columns: 270px minmax(0, 1fr) 250px; }
+  .agno:not(:has(.setup-toggle)):not(:has(.cprail)) { grid-template-columns: 270px minmax(0, 1fr); }
   .setup { position: sticky; top: 8px; max-height: max(420px, calc(100vh - 196px)); overflow-y: auto; }
 }
+
+/* ===== the Agentic Trust Control Plane rail (the approved mock's right column) ===== */
+.cprail { display: grid; gap: 8px; align-content: start; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.cprail .kicker { margin: 0; }
+.cprail__layers { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cprail__layer { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); font-size: 12.5px; transition: border-color 0.3s, box-shadow 0.3s; }
+.cprail__layer b { font-size: 13px; }
+.cprail__layer span { color: var(--text-body); }
+.cprail__layer .tag { justify-self: start; }
+.cprail__layer[data-hot] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.cprail__layer::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent-inactive); }
+.cprail__layer[data-hot]::before { background: var(--accent); }
+@media (max-width: 1279px) { .agno:has(.cprail) .cprail { grid-column: 1 / -1; } } /* narrow: the rail flows under, still readable */
 /* sidebar collapsed: chat and evidence get the room; the toggle floats at the panel's old edge */
 .agno[data-sidebar="collapsed"] { grid-template-columns: minmax(0, 1fr); }
 .setup-toggle {

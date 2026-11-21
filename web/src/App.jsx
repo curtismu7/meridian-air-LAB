@@ -20,6 +20,7 @@ import { loadResume, saveResume, takeReturn } from "./resume";
 import ShelfLink from "./components/ShelfLink.jsx";
 import VerifyMark from "./components/VerifyMark.jsx";
 import SignInDialog from "./components/SignInDialog";
+import ControlPlaneRail from "./components/ControlPlaneRail";
 import TopMenu from "./top-menu/TopMenu.jsx";
 import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import "./top-menu/top-menu.css";
@@ -434,6 +435,7 @@ export default function App() {
                   </EvidenceColumn>
                 )}
               </div>
+              {!presenter && <ControlPlaneRail uc={uc} />}
             </div>
           )}
           {current === "runs" && <RunHistory refresh={runCount} />}
