@@ -1,0 +1,144 @@
+{
+  "schema": "meridian-air-replies/1",
+  "about": "What the agent says in the chat after a MOCK tool call, per vertical and per tool, plus what it says when a write is held for approval. Every value is LAB-INVENTED and fixed per vertical and persona, so a run repeats exactly; nothing here is a real balance, order or record (the simulation banner and the MOCK labels stay on every page). {{name}} is filled from the vertical's cast (server/src/cast.js), the values below (persona first, then common), the run's amount and the tool arguments. A vertical reply wins over a shared one; a tool with neither gets the fallback. A test proves every tool any vertical runs has a reply and every {{name}} is filled.",
+  "values": {
+    "banking": {
+      "common": {
+        "defaultAmount": 250,
+        "fee": "$15.00",
+        "mortgageDue": "December 1"
+      },
+      "standard": {
+        "checking": "$4,250.00",
+        "savings": "$12,800.00",
+        "mortgageBalance": "$312,450.00",
+        "mortgageRate": "5.25% fixed",
+        "mortgagePayment": "$1,985.00",
+        "portfolioValue": "$86,300.00",
+        "portfolioChange": "up 2.4% this month",
+        "portfolioMix": "60% stocks, 30% bonds and 10% cash",
+        "accountLast4": "4821"
+      },
+      "premium": {
+        "checking": "$18,940.00",
+        "savings": "$52,300.00",
+        "mortgageBalance": "$512,000.00",
+        "mortgageRate": "4.875% fixed",
+        "mortgagePayment": "$2,940.00",
+        "portfolioValue": "$402,150.00",
+        "portfolioChange": "up 1.8% this month",
+        "portfolioMix": "70% stocks, 20% bonds and 10% cash",
+        "accountLast4": "9036"
+      }
+    },
+    "healthcare": {
+      "common": {
+        "defaultAmount": 120,
+        "fee": "$25.00",
+        "dentalMax": "$1,500.00"
+      },
+      "standard": {
+        "plan": "Silver PPO",
+        "deductible": "$2,000.00",
+        "deductibleMet": "$640.00",
+        "coinsurance": "20%",
+        "dentalLeft": "$1,200.00",
+        "bloodType": "O+",
+        "allergies": "penicillin and latex",
+        "lastVisit": "October 14"
+      },
+      "premium": {
+        "plan": "Gold PPO",
+        "deductible": "$1,000.00",
+        "deductibleMet": "$820.00",
+        "coinsurance": "10%",
+        "dentalLeft": "$1,350.00",
+        "bloodType": "A-",
+        "allergies": "peanuts",
+        "lastVisit": "November 2"
+      }
+    },
+    "retail": {
+      "common": {
+        "defaultAmount": 85,
+        "fee": "$12.00"
+      },
+      "standard": {
+        "orderNo": "#48213",
+        "order1": "#48213, running shoes for $129.00, shipped November 6",
+        "order2": "#48190, a rain jacket for $89.00, delivered",
+        "order3": "#48102, two pairs of socks for $18.00, delivered",
+        "giftCard": "$75.00",
+        "storeCredit": "$320.00",
+        "orderCount": "42",
+        "cardLast4": "7730"
+      },
+      "premium": {
+        "orderNo": "#51877",
+        "order1": "#51877, a road bike helmet for $149.00, shipped November 7",
+        "order2": "#51802, a duffel bag for $96.00, delivered",
+        "order3": "#51760, a water bottle for $24.00, delivered",
+        "giftCard": "$150.00",
+        "storeCredit": "$1,240.00",
+        "orderCount": "118",
+        "cardLast4": "3318"
+      }
+    }
+  },
+  "replies": {
+    "shared": {
+      "get_itinerary": "{{castUser}}'s itinerary: MER 114 seat 12A, departing Denver at 6:05 PM, gate B22, on time.",
+      "issue_refund": "Refund of {{amount}} issued to the SkyMiles account for booking BK-90412; the approval is on record and the confirmation email is on its way.",
+      "get_member_profile": "{{castUser}} is GOLD tier, 128,400 SkyMiles, preferred seat 12A.",
+      "request_rebooking": "Rebooking held: MER 208 departing 8:40 PM, window seat, no fare difference. Confirm and I will ticket it.",
+      "booking__book-seat": "Seat 12A on MER 114 is confirmed; boarding pass added to the wallet.",
+      "summarize_advisory": "Advisory for Denver: crosswinds 14:00-18:00, gusts to 35 knots; arrivals may see 20-40 minute holds.",
+      "run_pipeline_fix": "Pipeline fix applied: the 9:00 ingest job re-ran clean and the row count matches the source.",
+      "held": "I need an approval for that one \u2014 it is over the policy line. A manager has been notified on their device and I will continue the moment it is approved."
+    },
+    "airlines": {},
+    "banking": {
+      "get_account_balance": "Your checking balance is $4,250.00, and your savings balance is $12,800.00.",
+      "create_transfer": "Done: ${{amount}} moved from checking to savings. The confirmation number is on its way.",
+      "get_sensitive_account_details": "Here are the full details for account ending {{accountLast4}}.",
+      "get_portfolio_summary": "Your portfolio is {{portfolioValue}}, {{portfolioChange}}; mix: {{portfolioMix}}."
+    },
+    "healthcare": {
+      "view_coverage": "Your coverage is active: plan GH-24, primary care visits covered with a $25 copay.",
+      "pay_bill": "Payment of ${{amount}} applied to your patient billing balance.",
+      "sensitive_patient_records": "The sensitive record is available to your care team; access is logged."
+    },
+    "retail": {
+      "list_orders": "You have three recent orders; the latest shipped Tuesday and arrives Thursday.",
+      "checkout": "Checkout complete: ${{amount}} charged, order confirmation sent.",
+      "sensitive_order_history": "Full order history retrieved; the last 12 months are shown."
+    }
+  },
+  "proposals": {
+    "banking": {
+      "create_transfer": "I'm ready to move {{amount}} from checking to savings."
+    },
+    "healthcare": {
+      "pay_bill": "I'm ready to pay {{amount}} toward your patient bill."
+    },
+    "retail": {
+      "checkout": "I'm ready to check out {{amount}} with store credit."
+    },
+    "airlines": {
+      "issue_refund": "I can issue that refund \u2014 it will need an approval, which I will request now.",
+      "get_itinerary": "I can pull up that itinerary right away.",
+      "get_member_profile": "I can show the profile \u2014 note the tier rules on what is visible.",
+      "request_rebooking": "I can hold a rebooking and confirm it with you.",
+      "booking__book-seat": "I can book that seat now.",
+      "summarize_advisory": "I can summarize that advisory in a sentence or two.",
+      "run_pipeline_fix": "I can run the pipeline fix with a brokered credential."
+    }
+  },
+  "fallback": "Done: I checked your {{castAsset}} and everything is in order.",
+  "proposalFallback": "I have this request ready to go.",
+  "probeDenied": "A different agent then tried the same call for you and was refused, so it got nothing.",
+  "defaults": {
+    "state": "your area",
+    "query": "that topic"
+  }
+}

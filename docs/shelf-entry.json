@@ -1,0 +1,17 @@
+{
+  "demos": [
+    {
+      "id": "meridian-air-lab",
+      "name": "Meridian Air LAB",
+      "kind": "Demo",
+      "description": "The Airline That Runs on Agents: 11 chat-first scenes (MA1-MA11) — MCP booking, LLM routing with virtual keys, cost control, A2A from AgentCore, agent badges, CIBA+PingID refund, AI Guard vs prompt injection, fine-grained authorization, governance, credential broker, Elasticsearch audit evidence. Mock runs offline.",
+      "url": "http://localhost:7832",
+      "healthPath": "/api/health",
+      "composeFile": "meridian-air-LAB/docker-compose.yml",
+      "composeOverlays": [],
+      "pingProducts": [],
+      "notes": "Mock only by default (no SaaS Ping products shared; Real mode uses SaaS PingOne and is owner-run). Host-run: ./scripts/run.sh (port 7832). Docker: HOST_PORT=7834 docker compose up --build -d (published on 127.0.0.1 only). Settings: the app's own .env beside docker-compose.yml (copy .env.example; MA_* names). Fork of customer-agent-LAB with the catalog replaced by the 11 airline scenes. Live was owner-verified 2026-11-05 on the fork's parent; it is UNVERIFIED here until the owner re-checks it.",
+      "catalogId": "D24"
+    }
+  ]
+}

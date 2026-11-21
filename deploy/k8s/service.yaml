@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: meridian-air-lab
+  labels: { app: meridian-air-lab }
+spec:
+  selector: { app: meridian-air-lab }
+  ports:
+    - { name: http, port: 80, targetPort: http }
