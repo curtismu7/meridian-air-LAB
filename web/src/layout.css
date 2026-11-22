@@ -102,6 +102,8 @@
   cursor: pointer; font-size: 12px; padding: 0; z-index: 2;
 }
 .setup-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.setup-toggle[aria-expanded="false"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); }
+.setup-toggle[aria-expanded="false"]:hover { background: var(--accent-deep); color: var(--on-accent); }
 .agno[data-sidebar="collapsed"] .setup-toggle { position: fixed; left: 8px; top: 50%; transform: translateY(-50%); border-radius: 0 8px 8px 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .app[data-presenter] .agno { grid-template-columns: minmax(0, 1fr); }
@@ -150,8 +152,8 @@
 
 .wtt { margin: 0 0 8px; }
 .wtt .kicker { margin-top: 0; }
-.wtt__groups { display: grid; gap: 4px; max-height: 132px; overflow-y: auto; }
-.agentcol[data-talking] .wtt__groups { max-height: 92px; } /* once the chat has turns, the prompts give the reply more room (still visible, scrolls) */
+.wtt__groups { display: grid; gap: 4px; } /* never clipped: the agent column grows instead (owner 2026-11-22) */
+.agentcol[data-talking] .wtt__groups { max-height: none; }
 .wtt__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .wtt__group { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); }
 .wtt__chip { min-height: 32px; padding: 3px 10px; border-radius: 999px; font-size: 12px; text-align: left; }
