@@ -7,6 +7,7 @@
 // reason is in TOOL_NEEDS. The gateway's own tools/list is checked at run time as well: a tool it does not list is never called.
 import { isFlow, chainOf } from './flow.js';
 import { toolFor } from './cast.js';
+import { cibaConfigured } from './ciba.js';
 
 export const SE_MCP_TOOLS = new Set([
   'get_my_accounts', 'get_account_balance', 'create_transfer', 'get_sensitive_account_details', 'get_branch_hours', 'request_fee_waiver',
@@ -30,10 +31,16 @@ const PRIVILEGE_LANE = /^(privilege-gateway-leg|credential-swap|enterprise-manag
 const APPROVAL = new Set(['ciba-poll', 'ciba-authorize', 'hitl-receipt']);
 
 // { real: true, tool } or { real: false, reason } (fixed words; the reason names the part that keeps it Mock).
-export function realGate(uc, cast) {
+export function realGate(uc, cast, { cibaOk = cibaConfigured() } = {}) {
   if (!isFlow(uc)) return { real: false, reason: 'it is a guided page: the lab shows it and does not compute it' };
   const chain = chainOf(uc);
-  if (uc.track === 'hitl' || chain.some((k) => APPROVAL.has(k))) return { real: false, reason: 'its human approval (HITL, CIBA or elicitation) is simulated in this lab' };
+  if (uc.track === 'hitl' || chain.some((k) => APPROVAL.has(k))) {
+    // MA6 is the one approval scene with a Real path: the CIBA backchannel + poll run against the owner's
+    // CIBA app (MA_CIBA_*), the approval arrives on the registered authenticator (FIDO2 passkey), and the
+    // mock phone UI mirrors it. Other approval scenes stay Mock. Gated by the CIBA settings' presence.
+    if (uc.id === 'MA6') return cibaOk ? { real: true, tool: 'cancel_airline_reservation' } : { real: false, reason: "its CIBA approval needs the owner's CIBA app (fill the MA_CIBA_* settings in the lab's .env)" };
+    return { real: false, reason: 'its human approval (HITL, CIBA or elicitation) is simulated in this lab' };
+  }
   if (Object.hasOwn(TRUSTED_FEATURE, uc.id)) return { real: false, reason: `${TRUSTED_FEATURE[uc.id]} is a trusted-caller feature, and this lab never sends trusted-caller headers` };
   if (/\btrat\b|transaction token/i.test(`${uc.title} ${uc.pingOneSolution}`)) return { real: false, reason: 'transaction tokens (TraT) are a trusted-caller feature, and this lab never sends trusted-caller headers' };
   if (chain.some((k) => A2A.test(k)) || uc.primaryTool === 'get_portfolio_summary') return { real: false, reason: 'agent-to-agent (A2A) multi-hop runs on the agent-service, which is scaled to 0 on SE' };
@@ -69,6 +76,9 @@ export function toolArgs(tool, { vertical, accounts = [], amount }) {
     case 'get_flight_status': return { flight_number: 'UA502' };
     case 'book_airline_flight': return { flight_number: 'UA502', origin: 'SFO', destination: 'ORD', amount: 346, passengers: 1 };
     case 'sensitive_airline_bookings': return {};
+    // MA6's Real refund: the gateway's catalogue has no refund tool, so the story's refund is realized
+    // by cancelling the $4,120 booking (the CIBA obligation trips at this value).
+    case 'cancel_airline_reservation': return { booking_id: 'BK-90412', reason: 'Customer refund request — Meridian Air Privilege in One Demo (Real)' };
     default: return {};
   }
 }

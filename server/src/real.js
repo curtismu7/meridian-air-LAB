@@ -21,6 +21,8 @@ import { enrichHop } from './vendor/hopDetail.mjs';
 import HOP_CATALOG from './vendor/hop-catalog.json' with { type: 'json' };
 import { createGatewaySession, gatewayUrlProblem, parseAuditTrail } from './mcpClient.js';
 import { NEEDS_ACCOUNTS, toolArgs } from './realGate.js';
+import { cibaConfigured } from './ciba.js';
+import { liveSettingsFor } from './settings.js';
 import { situationOf } from './situations.js';
 import { cleanFree } from './credentials.js';
 import { realExchanges } from './gatewayExchanges.js';
@@ -147,6 +149,38 @@ export function scrubError(json, secrets = []) {
   return out;
 }
 const failText = (r, who = 'PingOne') => (r.unreachable ? `${who} did not answer (no connection, a timeout or an unreadable answer).` : r.redirected ? `${who} answered with a redirect; the lab never follows one.` : r.truncated ? 'The answer was larger than the lab reads, so it was cut off.' : `${who} answered HTTP ${r.status}.`);
+
+// MA6's CIBA legs. The CIBA app's secret rides here (the entry gate allows real.js): Basic auth on
+// bc-authorize and on the poll's token call. err.edge marks the known PingOne CDN false-positive
+// (its WAF parsing the Basic header as an AWS SigV4 signature).
+const cibaForm = (o) => new URLSearchParams(o).toString();
+async function cibaBcAuthorize({ envId, clientId, clientSecret, loginHint, bindingMessage, scope = 'openid', fetchImpl, timeoutMs }) {
+  const auth = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+  const r = await fetchImpl(`https://auth.pingone.com/${envId}/as/bc-authorize`, {
+    method: 'POST', redirect: 'error',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: auth },
+    body: cibaForm({ login_hint: loginHint, scope, binding_message: bindingMessage }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = new Error(`bc-authorize answered HTTP ${r.status}: ${j.error ?? ''} ${j.message ?? j.error_description ?? ''}`.trim());
+    err.edge = r.status === 403 && /Credential|SignedHeaders|AWS/i.test(`${j.message ?? ''}`);
+    throw err;
+  }
+  return { authReqId: j.auth_req_id, expiresIn: j.expires_in ?? 300, interval: j.interval ?? 5 };
+}
+async function cibaPoll({ envId, clientId, clientSecret, authReqId, fetchImpl, timeoutMs }) {
+  const auth = `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`;
+  const r = await fetchImpl(`https://auth.pingone.com/${envId}/as/token`, {
+    method: 'POST', redirect: 'error',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: auth },
+    body: cibaForm({ grant_type: 'urn:openid:params:grant-type:ciba', auth_req_id: authReqId }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const j = await r.json().catch(() => ({}));
+  return { ok: r.ok, error: r.ok ? null : (j.error ?? `HTTP ${r.status}`), tokens: r.ok ? j : null };
+}
 
 export function createReal({ config = { problem: 'not configured' }, missing = FULL_REQUIRED, wanted = false, fetchImpl = (...a) => globalThis.fetch(...a), timeoutMs = TIMEOUT_MS, maxBytes = MAX_BODY_BYTES, now = Date.now, gatewayFetch } = {}) {
   const configured = () => !config.problem;
@@ -411,6 +445,68 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       decision: { outcome: audit?.decision ?? decisionOutcome, by: 'the Agent Gateway (REAL)' },
       note: last.kind === 'ok' ? 'The gateway let tools/call through, so its policy permitted it.' : m.note, request: { tool, arguments: argsShown(args) }, response: { status: last.status, ...(audit ? { 'x-gw-audit-trail': audit.parsed ?? audit.raw, decision: audit.decision } : {}), ...(last.headers['www-authenticate'] ? { 'www-authenticate': last.headers['www-authenticate'] } : {}) },
     });
+    // MA6's Real CIBA leg: when the policy holds the call for a human approval (HOLD or a CIBA
+    // obligation), the lab starts a real CIBA backchannel (bc-authorize), shows the pending approval
+    // in the phone UI, polls the token endpoint, and retries the tool call with the approval flag.
+    // The approval itself happens on the approver's registered authenticator (FIDO2 passkey today,
+    // PingID push once enrolled) — the phone screen mirrors the state, it does not fake the approval.
+    if (uc.id === 'MA6' && cibaConfigured(liveSettingsFor())) {
+      const needsApproval = last.kind === 'hold'
+        || (audit?.decision && /ciba|hitl|approval/i.test(JSON.stringify(audit.parsed ?? audit.raw ?? '')))
+        || (last.kind === 'deny' && /ciba|approval|hitl/i.test(m.note ?? ''));
+      if (needsApproval) {
+        const envId = config.environmentId;
+        const cfg = liveSettingsFor();
+        const cibaId = cfg['MA_CIBA_CLIENT_ID'];
+        const cibaSec = cfg['MA_CIBA_CLIENT_SECRET'] ?? cfg['MA_CIBA_APP_CREDENTIAL'];
+        const approver = cfg.MA_CIBA_LOGIN_HINT || session?.claims?.sub;
+        push({ kind: 'ciba-authorize', label: 'CIBA backchannel [REAL]: bc-authorize to PingOne', from: 'bff', to: 'idp', verdict: 'ok', traceparent: tp(),
+          request: { url: `https://auth.pingone.com/${envId}/as/bc-authorize`, login_hint: approver, binding_message: 'APPROVE $4,120 refund' } });
+        let authReqId = null;
+        let cibaNote = null;
+        try {
+          const init = await cibaBcAuthorize({ envId, clientId: cibaId, clientSecret: cibaSec, loginHint: approver, bindingMessage: 'APPROVE', fetchImpl, timeoutMs });
+          authReqId = init.authReqId;
+          push({ kind: 'ciba-poll', label: `CIBA poll [REAL]: waiting for the approval on the registered authenticator (interval ${init.interval}s)`, from: 'bff', to: 'idp', verdict: 'held', traceparent: tp(),
+            request: { grant_type: 'urn:openid:params:grant-type:ciba', auth_req_id: `${init.authReqId.slice(0, 8)}…` } });
+          // Poll for up to 3 minutes; the approval arrives on the authenticator, not in this process.
+          const deadline = Date.now() + 180_000;
+          let tokens = null; let pollError = null;
+          while (Date.now() < deadline) {
+            await new Promise((r) => setTimeout(r, (init.interval || 5) * 1000));
+            const p = await cibaPoll({ envId, clientId: cibaId, clientSecret: cibaSec, authReqId: init.authReqId, fetchImpl, timeoutMs });
+            if (p.ok) { tokens = p.tokens; break; }
+            if (p.error !== 'authorization_pending' && p.error !== 'slow_down') { pollError = p.error; break; }
+          }
+          if (tokens) {
+            push({ kind: 'ciba-poll', label: 'CIBA poll [REAL]: the approval arrived; the CIBA token was issued', from: 'bff', to: 'idp', verdict: 'ok', traceparent: tp(),
+              response: { note: 'the approver completed the authentication on their registered authenticator' } });
+            // Retry the tool call once. The CIBA token itself is not what the gateway consumes: the
+            // gateway re-runs its policy, which now sees the approval obligation discharged through
+            // the HitlApproved flag the lab carries (the CIBA token proves the person approved).
+            const retry = await gs.callTool(tool, args);
+            calls.push(retry); seen.push({ title: `tools/call ${tool} (after approval)`, call: retry });
+            const rAudit = parseAuditTrail(retry.headers['x-gw-audit-trail']);
+            push({ kind: 'authorize-decision', label: `Authorize decision [REAL] after approval: ${retry.kind === 'ok' ? 'PERMIT' : retry.kind.toUpperCase()}, read from the gateway's answer`, from: 'gateway', to: 'authorize', verdict: retry.kind === 'ok' ? 'ok' : 'deny', traceparent: retry.traceparent,
+              decision: { outcome: rAudit?.decision ?? (retry.kind === 'ok' ? 'PERMIT' : 'DENY'), by: 'the Agent Gateway (REAL)', note: 'the approval was collected over CIBA' } });
+            if (retry.kind === 'ok') {
+              push({ kind: 'tool-dispatched', label: `MCP tool [REAL]: tools/call ${tool} (approved)`, from: 'gateway', to: 'mcp', verdict: 'ok', traceparent: retry.traceparent, note: 'The SE MCP server ran the tool after the CIBA approval.' });
+              const rr = retry.rpc?.result ?? null;
+              push({ kind: 'agent-reply', label: 'Agent reply [REAL]: written from the approved tool result', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), response: { reply: replyText(tool, rr) } });
+              return { outcome: 'REAL_PERMIT', reply: { who: 'Agent', text: replyText(tool, rr) } };
+            }
+            cibaNote = 'the approval was collected but the gateway still refused the call';
+          } else {
+            cibaNote = pollError ? `the CIBA poll failed: ${pollError}` : 'the approval did not arrive within 3 minutes';
+            push({ kind: 'ciba-poll', label: 'CIBA poll [REAL]: no approval in time', from: 'bff', to: 'idp', verdict: 'deny', traceparent: tp(), note: cibaNote });
+          }
+        } catch (e) {
+          cibaNote = `CIBA could not start: ${e.message}`;
+          push({ kind: 'ciba-authorize', label: 'CIBA backchannel [REAL]: bc-authorize failed', from: 'bff', to: 'idp', verdict: 'deny', traceparent: tp(), note: cibaNote });
+        }
+        if (cibaNote) { rest(2, `Not run: ${cibaNote}`); return { outcome: 'REAL_CIBA_INCOMPLETE', reply: { who: 'Agent', text: `I could not complete the approval: ${cibaNote}` } }; }
+      }
+    }
     const result = last.kind === 'ok' ? last.rpc?.result ?? null : null;
     const rpcError = last.kind === 'ok' ? last.rpc?.error ?? null : null;
     const toolFailed = last.kind === 'ok' && (!result || result.isError === true || rpcError);

@@ -378,9 +378,12 @@ test('sign-in is per workspace; sign-out works', async () => {
 
 test('use-case gating: only SE mcp-server tools run Real; the rest run Mock in Real mode, every hop MOCK with the reason, with no sign-in needed', async () => {
   const cast = loadCast('/nonexistent', 'banking');
-  const realIds = MANIFEST.usecases.filter((u) => realGate(u, cast).real).map((u) => u.id);
+  // cibaOk:false = the CIBA app is not configured (the pinned default; the host .env may carry the settings).
+  const realIds = MANIFEST.usecases.filter((u) => realGate(u, cast, { cibaOk: false }).real).map((u) => u.id);
   assert.deepEqual(realIds, ['MA1', 'MA2', 'MA3', 'MA7', 'MA8', 'MA11']);
-  const why = (id) => realGate(findUseCase(id), cast).reason;
+  // MA6 joins the Real set only when the owner configures the CIBA app (the lab's .env may carry it in Docker runs):
+  assert.deepEqual(MANIFEST.usecases.filter((u) => realGate(u, cast, { cibaOk: true }).real).map((u) => u.id), ['MA1', 'MA2', 'MA3', 'MA6', 'MA7', 'MA8', 'MA11']);
+  const why = (id) => realGate(findUseCase(id), cast, { cibaOk: false }).reason;
   assert.match(why('MA4'), /A2A/); assert.match(why('MA5'), /personal-agent/); assert.match(why('MA6'), /approval/);
   assert.match(why('MA9'), /guided/); assert.match(why('MA10'), /Privilege/);
   for (const id of realIds) assert.ok(SE_MCP_TOOLS.has(realGate(findUseCase(id), cast).tool));

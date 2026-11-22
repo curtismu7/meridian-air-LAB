@@ -74,7 +74,9 @@ export const COMPOSE_ENV = {
     'MA_USER_CLIENT_ID', 'MA_USER_CLIENT_SECRET', 'MA_AGENT_CLIENT_ID', 'MA_AGENT_CLIENT_SECRET', 'MA_DEMO_USERNAME', 'MA_AGENT_GATEWAY_URL', 'MA_GATEWAY_AUDIENCE', 'MA_GATEWAY_SCOPE',
     // ... and, optional (empty = agent:invoke), the scope of the agent token and token exchange 1 (the two-exchange pattern),
     // plus MA11's SIEM evidence leg (loopback Elasticsearch read; all or none).
-    'MA_AGENT_SCOPE', 'MA_SIEM_URL', 'MA_SIEM_READ_APIKEY'],
+    'MA_AGENT_SCOPE', 'MA_SIEM_URL', 'MA_SIEM_READ_APIKEY',
+    // ... and MA6's Real CIBA (optional): the CIBA app + the approver's login hint (empty = the signed-in user).
+    'MA_CIBA_CLIENT_ID', 'MA_CIBA_CLIENT_SECRET', 'MA_CIBA_LOGIN_HINT'],
   fixed: ['PORT', 'MA_BIND', 'MA_PUBLISH', 'ALLOW_MOCK_SIGNIN', 'MA_DEPLOY_MODE', 'MA_LIVE_FROM_ENV'],
 };
 export function environmentOf(text) {
@@ -94,7 +96,7 @@ test('owner 2026-11-09/11-10: no env_file; the container gets exactly the listed
   assert.deepEqual(Object.keys(env).sort(), [...COMPOSE_ENV.substituted, ...COMPOSE_ENV.fixed].sort(), 'exactly these names, no other');
   for (const k of COMPOSE_ENV.substituted) assert.match(env[k], new RegExp(`^\\$\\{${k}:-[^}$]*\\}$`), `${k} comes from its own name by substitution`);
   for (const k of ['PINGONE_ENVIRONMENT_ID', 'PINGONE_REGION', 'PINGONE_CLIENT_ID', 'PINGONE_CLIENT_SECRET', 'MA_ALLOW_LIVE', ...REAL_KEYS.filter((x) => x.startsWith('MA_'))]) assert.equal(env[k], `\${${k}:-}`, `${k} defaults to empty: a clone with no .env is Mock with Real disabled`);
-  assert.deepEqual(Object.keys(env).filter((k) => /SECRET|PASSWORD|TOKEN|KEY|PINGONE|CLIENT|USERNAME|GATEWAY|AUDIENCE|SCOPE|SIEM/.test(k)).sort(), [...REAL_KEYS].sort(), 'no other secret-like name: exactly the Real settings the server reads (SIEM names are the optional evidence-leg settings)');
+  assert.deepEqual(Object.keys(env).filter((k) => /SECRET|PASSWORD|TOKEN|KEY|PINGONE|CLIENT|USERNAME|GATEWAY|AUDIENCE|SCOPE|SIEM|CIBA/.test(k)).sort(), [...REAL_KEYS].sort(), 'no other secret-like name: exactly the Real settings the server reads (SIEM names are the optional evidence-leg settings)');
   assert.ok(!Object.keys(env).some((k) => /PASSWORD/.test(k)), 'no password is ever passed: the person types it in the Sign in dialog');
 });
 
