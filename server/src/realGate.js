@@ -64,8 +64,10 @@ export function toolArgs(tool, { vertical, accounts = [], amount }) {
     case 'get_branch_hours': return { vertical };
     case 'pay_bill': case 'checkout': return { amount: amt };
     // The airlines family (the Real role remap): the lab's own argument values, labelled in the hop.
-    case 'get_flight_status': return { flight_number: 'MER 114' };
-    case 'book_airline_flight': return { flight_number: 'MER 114', origin: 'ATL', destination: 'DEN', amount: amt, passengers: 1 };
+    // UA502 carries the SE gateway's catalogue fare ($346) — a catalogue flight must book at its fare, so
+    // amount is the fare, not the caller's number (the gateway's backstop denies unknown flights / wrong fares).
+    case 'get_flight_status': return { flight_number: 'UA502' };
+    case 'book_airline_flight': return { flight_number: 'UA502', origin: 'SFO', destination: 'ORD', amount: 346, passengers: 1 };
     case 'sensitive_airline_bookings': return {};
     default: return {};
   }
