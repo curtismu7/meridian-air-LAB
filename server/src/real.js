@@ -335,7 +335,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
           } else {
             addToken('delegated token (REAL, exchange 2: for the gateway)', delegated, `REAL delegated token: your subject, the agent in the act claim, the gateway audience and scope. Shown raw for teaching.${audNote}`, true);
             const seen = [];
-            try { const gw = await gatewayLeg({ token: delegated, vertical, tool, uc, tp, push, notRun, seen }); outcome = gw.outcome; reply = gw.reply; } finally { gatewayTrace = realExchanges(seen, { url: config.gatewayUrl, token: delegated }); }
+            try { const gw = await gatewayLeg({ token: delegated, vertical, tool, uc, tp, push, notRun, seen, traceId: trace.traceId }); outcome = gw.outcome; reply = gw.reply; } finally { gatewayTrace = realExchanges(seen, { url: config.gatewayUrl, token: delegated }); }
           }
         }
       }
@@ -349,7 +349,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
   }
 
   // 4-8: the Agent Gateway as an MCP client, the decision read from its answer, the tool, the API behind it and the reply.
-  async function gatewayLeg({ token, vertical, tool, uc, tp, push, notRun, seen }) {
+  async function gatewayLeg({ token, vertical, tool, uc, tp, push, notRun, seen, traceId }) {
     const gs = createGatewaySession({ url: config.gatewayUrl, token, vertical, nextTraceparent: tp, fetchImpl: gatewayFetch ?? fetchImpl });
     const shownReq = (c, body) => ({ method: 'POST', url: config.gatewayUrl, headers: Object.fromEntries(c.sentHeaders.map((k) => [k, k === 'authorization' ? 'Bearer [the delegated token]' : k === 'traceparent' ? c.traceparent : k === 'x-active-vertical' ? vertical : k === 'x-token-validation' ? 'jwks' : k === 'mcp-session-id' ? short(gs.sessionId()) : k === 'mcp-protocol-version' ? '(from initialize)' : k === 'accept' ? 'application/json, text/event-stream' : 'application/json'])), body });
     const shownRes = (c, body) => ({ status: c.status, headers: Object.fromEntries(Object.entries(c.headers).map(([k, v]) => [k, k === 'mcp-session-id' ? short(v) : v])), body });
@@ -397,6 +397,9 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       return { outcome: 'REAL_TOOL_ERROR', reply: { who: 'Agent', text: `I could not find ${needTwo ? 'two accounts' : 'an account'} of yours for ${tool}, so I did not call it.` } };
     }
     const args = toolArgs(tool, { vertical, accounts, amount: situationOf(uc.id).amount });
+    // MA11's SIEM marker rides in the first string tool argument on the Real path too: the gateway logs the
+    // arguments it forwarded, its verdict streams to the SIEM, and the lab's read-only search then matches by marker.
+    if (uc.id === 'MA11' && traceId) args.marker = `meridian-air-${String(traceId).replace(/[^0-9a-f]/gi, '').slice(0, 12)}`;
     const call = pre ? null : await gs.callTool(tool, args);
     if (call) { calls.push(call); seen.push({ title: `tools/call ${tool}`, call }); }
     const last = call ?? pre;

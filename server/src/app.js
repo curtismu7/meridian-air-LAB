@@ -122,6 +122,17 @@ export function createApp({
       return { seq: s.seq, run };
     });
     res.set('traceparent', out.run.traceparent);
+    // MA11's evidence leg on the Real path too: the gateway streamed this run's verdict, so the marker search can genuinely match.
+    const sc = siemConfig(liveSettings || liveSettingsFor());
+    if (uc.id === 'MA11' && sc.ok) {
+      const marker = markerFor(out.run.traceId);
+      const ev = await findEvidence({ cfg: sc, marker, from: Date.now() - 60_000, to: Date.now() + 60_000 });
+      out.run.siem = {
+        level: 'real', marker, kind: ev.kind, note: ev.note ?? null,
+        matched: (ev.matched ?? []).map(({ id, index, source }) => ({ id, index, source: maskDeep(source) })),
+        inferred: (ev.inferred ?? []).map(({ id, index, source }) => ({ id, index, source: maskDeep(source) })),
+      };
+    }
     return res.json({ ok: true, workspace: id, seq: out.seq, run: out.run });
   };
 
