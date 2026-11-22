@@ -11,6 +11,7 @@ import { notRunText, ranCount } from "../lib";
 import { HANDOFF_WHY } from "../chat";
 import { visible } from "../safeText";
 import { GoDeeper } from "./HandoffCard";
+import SiemEvidence from "./SiemEvidence";
 
 // Why this run went the way it did: how the use case was chosen, then what the run did (chat.js reasoningOf). The chat shows only the reply.
 function Why({ steps, testId }) {
@@ -74,6 +75,8 @@ export default function EvidenceColumn({ run, selHop, onSelect, config, onTab, o
         <>
           {/* A Here + go deeper use case: the lab that covers this run in depth (moved out of the chat, owner 2026-11-09). */}
           {run && uc && run.useCase?.id === uc.id && <GoDeeper uc={uc} vertical={vertical} userId={userId} />}
+          {/* MA11's Real SIEM evidence, when the run carries it (Real mode + the SIEM configured) */}
+          {run && run.siem && <SiemEvidence siem={run.siem} />}
           {run && <Why steps={why} testId="evidence-why" />}
           {/* A segmented control, not a second tablist: the page's tabpanel is the agent area itself. Pressed = the view on show. */}
           <div className="evtabs seg" role="group" aria-label="Evidence view" data-testid="evidence-tabs">

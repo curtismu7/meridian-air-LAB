@@ -510,6 +510,10 @@ export function runUseCase(uc, input) {
     return { ...base, kind: 'guided', computed: false, persona: ctx.person.key, outcome: uc.expectedOutcome, matchesExpected: null, hops: enrichAll(ctx), tokens: ctx.tokens, traceId: ctx.trace.traceId, traceparent: formatTraceparent(ctx.trace.traceId, ctx.rootSpan), narration: narrate(ctx, uc.expectedOutcome) };
   }
   const ctx = makeCtx(uc, input);
+  // MA11's run marker: derived from the run's own trace id (unique per run), so the SIEM search
+  // matches THIS call, not the catalog's prop value. The mock tool call carries it in the first
+  // string argument; the Real SIEM leg (siem.js) searches for the same string.
+  if (uc.id === 'MA11') ctx.sit = { ...ctx.sit, args: { ...(ctx.sit.args || {}), marker: `meridian-air-${ctx.trace.traceId.replace(/[^0-9a-f]/gi, '').slice(0, 12)}` } };
   frameBefore(ctx);
   if (!ctx.sit.public) signIn(ctx);
   frameAfterSignIn(ctx);

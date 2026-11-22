@@ -113,3 +113,13 @@ summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .pconsole__why { margin: 0; }
 .pconsole__scenes { display: flex; flex-wrap: wrap; gap: 8px; }
 .pconsole__scenes button { min-height: 32px; padding: 3px 12px; font-size: 12px; }
+
+/* MA11's SIEM evidence panel */
+.siem { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--border); border-left: 4px solid var(--status-ok); border-radius: 8px; background: var(--surface-2); }
+.siem .kicker { margin: 0; }
+.siem p { margin: 0; }
+.siem__h { font-size: 12px; font-weight: 700; }
+.siem__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.siem__hit { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.siem__meta { margin: 0; font-size: 12px; }
+.siem__msg { font-size: 12px; }

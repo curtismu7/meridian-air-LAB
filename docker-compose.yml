@@ -43,6 +43,8 @@ services:
       MA_GATEWAY_AUDIENCE: ${MA_GATEWAY_AUDIENCE:-}
       MA_GATEWAY_SCOPE: ${MA_GATEWAY_SCOPE:-}
       MA_AGENT_SCOPE: ${MA_AGENT_SCOPE:-}
+      MA_SIEM_URL: ${MA_SIEM_URL:-}
+      MA_SIEM_READ_APIKEY: ${MA_SIEM_READ_APIKEY:-}
       MA_LAB_MODE: ${MA_LAB_MODE:-mock}
       MA_BRAIN_URL: ${MA_BRAIN_URL:-}
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-meridian-air.local.ping-devops.com}

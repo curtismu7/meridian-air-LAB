@@ -2,6 +2,7 @@ import { installNetguard } from './netguard.js';
 import { startHttpServer, createApp } from './app.js';
 import { allPassed, runChecks } from './doctor.js';
 import { assertBindAllowed, bindHost, isLoopbackHost, liveRefusal, resolvePort } from './safety.js';
+import { siemConfig } from './siem.js';
 import { defaultMode, deployModeFrom, modeFrom } from './config.js';
 import { applySharedSettings, fullWanted, liveSettingsFor, missingFull, missingIn, takeLiveSettingsFromEnv } from './settings.js';
 import { createReal, realConfig } from './real.js';
@@ -43,12 +44,19 @@ const liveOn = fullOn || (live.configured() && liveRefused === null);
 // otherwise nothing. Mock runs never use them (a test asserts zero attempts).
 const allowHosts = fullOn ? real.hosts().filter((h) => !isLoopbackHost(h)) : [hostToAllow(live, liveRefused)].filter(Boolean);
 for (const h of allowHosts) guard.allowHost(h);
+// MA11's SIEM evidence leg (optional): when configured, the lab reads the owner's Elasticsearch through the
+// owner's port-forward. From Docker that is host.docker.internal (the Mac); from a host run it is loopback.
+const siem = siemConfig(liveSettings);
+if (siem.ok) {
+  const siemHost = new URL(siem.base).hostname;
+  if (!isLoopbackHost(siemHost)) guard.allowHost(siemHost);
+}
 // The llama.cpp brain (Step 2, owner opt-in): one origin from MA_BRAIN_URL, loopback or host.docker.internal only. Loopback is already allowed; from Docker the
 // netguard allows host.docker.internal and nothing else. Unset or invalid: no brain, and the page offers Scripted only.
 const brainCfg = brainConfig(process.env);
 allowBrainHost(guard, brainCfg);
 const brain = createBrain({ config: brainCfg });
-const app = createApp({ bind: host, workspaces: createWorkspaces({ defaultMode: defaultMode() }), live, real, brain, health: createHealth({ runtime: () => (liveOn ? 'live' : 'offline') }) });
+const app = createApp({ bind: host, workspaces: createWorkspaces({ defaultMode: defaultMode() }), live, real, brain, health: createHealth({ runtime: () => (liveOn ? 'live' : 'offline') }), liveSettings });
 const { url } = await startHttpServer({ port: resolvePort(), host, app });
 console.log(`[meridian-air-lab] lab at ${url} (opens in ${mode} mode; ${hosted ? 'hosted build, mock only' : 'loopback'}; ${fullOn ? `full Real is on: outbound only to ${real.origins().join(' and ')}` : liveOn ? `Real (identity provider only) is on: outbound only to ${live.origin()}` : 'no outbound network'}${brain.configured() ? `; brain: ${brain.label()}` : ''})`);
 console.log(`[meridian-air-lab] health: ${url}api/health`);

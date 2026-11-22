@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { hostCheck, sameOriginWrites, liveRefusal, mockSignInRefusal, notConfiguredText, allowedExtraHosts, trustedProxyHeaders } from './safety.js';
+import { liveSettingsFor } from './settings.js';
 import { createHealth } from './health.js';
 import { DEFAULT_VERTICAL, isFullVertical, isKnownVertical, isPersona, loadCast, verticalList, PERSONAS } from './cast.js';
 import { defaultMode, isHosted, modeOf, MODES } from './config.js';
@@ -25,6 +26,7 @@ import { parseTraceparent, randomTraceparent } from './trace.js';
 import { createLive, LiveRefused } from './live.js';
 import { createReal, RealRefused, REDIRECT_URI } from './real.js';
 import { realGate } from './realGate.js';
+import { siemConfig, findEvidence, markerFor } from './siem.js';
 import { shelfInfo } from './shelfLink.js';
 import { promptsFor, routeOf } from './routes.js';
 import { createBrain, REASONS } from './brain.js';
@@ -55,7 +57,7 @@ const mockInReal = (run, reason) => ({
 });
 
 export function createApp({
-  health = createHealth(), configFile = CONFIG, env = process.env, bind = '127.0.0.1', workspaces = createWorkspaces({ defaultMode: defaultMode() }), webDist = WEB_DIST, live = createLive(), brain = createBrain(), real = createReal(),
+  health = createHealth(), configFile = CONFIG, env = process.env, bind = '127.0.0.1', workspaces = createWorkspaces({ defaultMode: defaultMode() }), webDist = WEB_DIST, live = createLive(), brain = createBrain(), real = createReal(), liveSettings = null,
 } = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -324,6 +326,7 @@ export function createApp({
           const gate = realGate(uc, cast);
           if (!gate.real) {
             // Real mode, but this use case stays Mock: the mock engine runs it (mock sign-in rules apply) and every hop says MOCK and why.
+            // MA11 is the one exception: its evidence leg (the SIEM search for this run's marker) is REAL when the SIEM is configured.
             const whyMock = mockSignInRefusal(mockCtx(req));
             if (whyMock) return res.status(403).json({ error: 'mock_signin_refused', detail: `This use case runs Mock in Real mode (${gate.reason}), and the mock sign-in is refused: ${whyMock}` });
             const out = await workspaces.write(id, (s) => {
@@ -334,6 +337,17 @@ export function createApp({
               return { seq: s.seq, run };
             });
             res.set('traceparent', out.run.traceparent);
+            // MA11's evidence leg: search the owner's SIEM for this run's marker (read-only, loopback only).
+            const sc = siemConfig(liveSettings || liveSettingsFor());
+            if (uc.id === 'MA11' && sc.ok) {
+              const marker = markerFor(out.run.traceId);
+              const ev = await findEvidence({ cfg: sc, marker, from: Date.now() - 60_000, to: Date.now() + 60_000 });
+              out.run.siem = {
+                level: 'real', marker, kind: ev.kind, note: ev.note ?? null,
+                matched: (ev.matched ?? []).map(({ id, index, source }) => ({ id, index, source: maskDeep(source) })),
+                inferred: (ev.inferred ?? []).map(({ id, index, source }) => ({ id, index, source: maskDeep(source) })),
+              };
+            }
             return res.json({ ok: true, workspace: id, seq: out.seq, run: out.run });
           }
           const session = real.session(id);
