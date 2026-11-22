@@ -119,6 +119,10 @@
 @media (min-width: 900px) {
   .agentcol { position: sticky; top: 8px; max-height: max(420px, calc(100vh - 196px)); }
   .agentcol__scroll { flex: 1 1 auto; overflow-y: auto; }
+  /* The first-open starter cards are never clipped: no inner cap while they show — the column grows
+     and the page scrolls (owner 2026-11-22). Once chatting, the cap returns to keep the reply in view. */
+  .agentcol:not([data-talking]) { max-height: none; }
+  .agentcol:not([data-talking]) .agentcol__scroll { overflow-y: visible; }
 }
 .avatar { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 10px; font-weight: 800; }
 .avatar--agent { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
