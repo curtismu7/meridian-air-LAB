@@ -97,11 +97,28 @@ export function personaOf(cast, persona) {
     ? { key: 'premium', sub: cast.castUser2, groups: [cast.castGroup], tier: 'premium' }
     : { key: 'standard', sub: cast.castUser, groups: [], tier: 'standard' };
 }
+// Real mode's tool remap, per vertical (owner decision 2026-11-21): the airlines cast names its own
+// story tools (get_itinerary, issue_refund, ...), which the SE mcp-server does not serve. For Real the
+// roles point at the airline tools the SAME server does serve (verticalTools.generated.ts), so the
+// scenes run genuinely Real without abandoning the airline story. Mock keeps the story tools.
+// A null value: no SE-served tool for that role — realGate refuses the use case and says the role stays Mock.
+export const REAL_TOOLS = {
+  airlines: { read: 'get_flight_status', write: 'book_airline_flight', sensitive: 'sensitive_airline_bookings', a2a: null },
+};
+const ROLE_KEYS = { read: 'castReadTool', write: 'castWriteTool', sensitive: 'castSensitiveTool', a2a: 'castA2aTool' };
 export const toolFor = (cast, tool, { remap = false } = {}) => {
   if (!tool || !Object.hasOwn(TOOL_ROLES, tool)) return tool;
   // A namespaced tool (booking__book-seat) is already vertical-specific and stays as-is in mock;
   // callers that address the SE mcp-server pass remap to get the vertical's tool for the same role.
   if (tool.includes('__') && !remap) return tool;
-  return { read: cast.castReadTool, write: cast.castWriteTool, sensitive: cast.castSensitiveTool, a2a: cast.castA2aTool }[TOOL_ROLES[tool]];
+  const role = TOOL_ROLES[tool];
+  // remap=true asks for the SE-served tool: the vertical's explicit override when it exists, else the
+  // cast's own tool (the banking/health/retail casts name tools the server actually serves).
+  if (remap) {
+    const byBrand = Object.entries(REAL_TOOLS).find(([brand]) => brand === cast.castHost || brand === 'airlines' && cast.castBrand === 'Meridian Air');
+    const override = byBrand?.[1]?.[role];
+    if (override !== undefined) return override ?? `(no SE tool for the ${role} role)`;
+  }
+  return cast[ROLE_KEYS[role]];
 };
 export const roleOf = (tool) => (typeof tool === 'string' && Object.hasOwn(TOOL_ROLES, tool) ? TOOL_ROLES[tool] : null);

@@ -11,6 +11,10 @@ import { toolFor } from './cast.js';
 export const SE_MCP_TOOLS = new Set([
   'get_my_accounts', 'get_account_balance', 'create_transfer', 'get_sensitive_account_details', 'get_branch_hours', 'request_fee_waiver',
   'redeem_miles', 'book_airline_flight', 'view_coverage', 'pay_bill', 'sensitive_patient_records', 'list_orders', 'checkout', 'sensitive_order_history',
+  // The airlines vertical's own tool family, served by the same SE mcp-server (verticalTools.generated.ts): the Real
+  // role remap (cast.js AIRLINES_REAL_TOOLS) points the airline scenes' roles at these, so MA1/2/3/7/8/11 run genuinely Real.
+  'get_flight_status', 'get_airline_bookings', 'get_loyalty_status', 'check_seat_availability',
+  'cancel_airline_reservation', 'pay_airline_fee', 'sensitive_airline_bookings', 'sensitive_passenger_record',
 ]);
 export const TOOL_NEEDS = {
   get_portfolio_summary: 'the A2A agent-service, which is scaled to 0 on SE',
@@ -59,6 +63,10 @@ export function toolArgs(tool, { vertical, accounts = [], amount }) {
     case 'request_fee_waiver': return { account_id: a0, reason: 'Customer request' };
     case 'get_branch_hours': return { vertical };
     case 'pay_bill': case 'checkout': return { amount: amt };
+    // The airlines family (the Real role remap): the lab's own argument values, labelled in the hop.
+    case 'get_flight_status': return { flight_number: 'MER 114' };
+    case 'book_airline_flight': return { flight_number: 'MER 114', origin: 'ATL', destination: 'DEN', amount: amt, passengers: 1 };
+    case 'sensitive_airline_bookings': return {};
     default: return {};
   }
 }
