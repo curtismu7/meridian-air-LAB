@@ -55,7 +55,7 @@ const boot = async (state) => {
   A = api(state); vi.stubGlobal("fetch", A);
   const view = render(<App />);
   await screen.findByTestId("uc-MA1");
-  await screen.findByTestId("wtt-MA1");
+  await screen.findByTestId("wtt-opt-MA1");
   await waitFor(() => expect(screen.getByTestId("agent-column").textContent).toMatch(/passenger-chat-agent/));
   return view;
 };
@@ -114,12 +114,13 @@ describe("What to type and the Scripted brain", () => {
     await boot();
     expect(screen.getByTestId("starters")).toBeTruthy();
     expect(screen.getByTestId("wtt-heading").textContent).toBe("What to type · Airlines · Meridian Air");
-    expect(within(screen.getByTestId("wtt-away")).getAllByRole("button").map((b) => b.textContent)).toEqual(["simulate an agent identity mismatch"]);
-    expect(within(screen.getByTestId("what-to-type")).getByText("Opens its own app")).toBeTruthy();
+    const groups = within(screen.getByTestId("wtt-select")).getAllByRole("group");
+    expect(groups.map((g) => g.label)).toEqual(["Runs here", "Opens its own app"]);
+    expect(within(groups[1]).getAllByTestId(/^wtt-/).map((o) => o.textContent)).toEqual(["UC2.6 · simulate an agent identity mismatch"]);
     expect(screen.queryByTestId("starter-UC2.6")).toBeNull(); // starter cards are prompts that run here
-    expect(screen.getAllByTestId(/^wtt-(UC|MA)/).map((b) => b.textContent)).toEqual(PROMPTS.map((p) => p.text));
+    expect(screen.getAllByTestId(/^wtt-opt-(UC|MA)/).map((o) => o.textContent)).toEqual(PROMPTS.map((p) => `${p.uc} · ${p.text}`));
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     const turn = await screen.findByTestId("turn");
     await within(turn).findByTestId("turn-answer");
     expect(posts("MA1")).toHaveLength(1);
@@ -156,7 +157,7 @@ describe("What to type and the Scripted brain", () => {
     const skips = ["step-up", "vault-key-inject"].map((kind, i) => ({ ...base[0], n: base.length + i + 1, kind, label: kind, verdict: "skip", traceparent: undefined, request: {}, response: {} }));
     await boot({ runAnswer: (id) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(runBody(id, { hops: [...base, ...skips] })) }) });
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     const turn = await screen.findByTestId("turn");
     await within(turn).findByTestId("turn-answer");
     onlyReply(turn);
@@ -167,7 +168,7 @@ describe("What to type and the Scripted brain", () => {
   test("a step-up outcome is an approval card labelled Authorize that says the hold is simulated, and the header says Waiting for you", async () => {
     await boot({ runAnswer: (id) => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(runBody(id, { outcome: "STEP_UP", hops: [...runBody().run.hops.slice(0, 3), { ...runBody().run.hops[3], verdict: "obligation" }] })) }) });
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA6"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA6" } });
     const card = await screen.findByTestId("turn-approval");
     expect(card.textContent).toMatch(/Step-up needed/);
     expect(card.textContent).toMatch(/simulated/);
@@ -187,13 +188,13 @@ describe("What to type and the Scripted brain", () => {
     fireEvent.change(screen.getByTestId("vertical"), { target: { value: "government" } });
     await screen.findByTestId("wtt-stub");
     expect(screen.getByTestId("wtt-stub").textContent).toMatch(/no demo pack yet/);
-    expect(screen.queryAllByTestId(/^wtt-UC/)).toHaveLength(0);
+    expect(screen.queryAllByTestId(/^wtt-opt-UC/)).toHaveLength(0);
   });
 
   test("See evidence on a turn brings the evidence column back to that run's sequence", async () => {
     await boot();
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     await u.click(screen.getByTestId("evtab-tokens"));
     expect(screen.getByTestId("evtab-sequence").getAttribute("aria-pressed")).toBe("false");
@@ -205,7 +206,7 @@ describe("What to type and the Scripted brain", () => {
   test("New chat clears the conversation and brings the starter cards back; sessions list this workspace's runs", async () => {
     await boot();
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     await waitFor(() => expect(screen.getAllByTestId("session-row")).toHaveLength(1));
     expect(screen.getByTestId("session-row").textContent).toMatch(/#1 MA1.*PERMIT/);
@@ -267,7 +268,7 @@ describe("hand-off and go deeper", () => {
   test("the Opens its own app chip answers with the hand-off reply and card, runs nothing, and the status reads Ready to hand off", async () => {
     await boot();
     const u = userEvent.setup();
-    await u.click(within(screen.getByTestId("wtt-away")).getByTestId("wtt-UC2.6"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "UC2.6" } });
     const turn = screen.getByTestId("turn");
     expect(turn.getAttribute("data-status")).toBe("handoff");
     onlyReply(turn);
@@ -296,7 +297,7 @@ describe("hand-off and go deeper", () => {
     // the evidence summary lists exactly what the link carries, in order
     const summary = screen.getByTestId("handoff-summary");
     expect([...summary.querySelectorAll("dt")].map((d) => `${d.textContent}=${d.nextElementSibling.textContent}`)).toEqual([...new URLSearchParams(open.getAttribute("data-href").split("?")[1])].map(([k, v]) => `${k}=${v}`));
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     // go deeper lives in the evidence column for that run, not in the reply (owner, 2026-11-09)
     expect(within(screen.getAllByTestId("turn")[1]).queryByTestId("go-deeper")).toBeNull();
@@ -306,7 +307,7 @@ describe("hand-off and go deeper", () => {
   test("a Here + go deeper run names the deeper lab in the evidence column (not the reply); off the proxy it says to start it from the Shelf", async () => {
     await boot();
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     expect(within(screen.getByTestId("turn")).queryByTestId("go-deeper")).toBeNull();
     expect(within(screen.getByTestId("agent-column")).queryByTestId("go-deeper")).toBeNull();
@@ -532,7 +533,7 @@ describe("evidence views, Quick Config and the full-page diagrams", () => {
     await boot();
     const u = userEvent.setup();
     expect(screen.getAllByTestId(/^evtab-/).map((b) => b.textContent)).toEqual(["Sequence", "Movie reel", "Topology", "Tokens"]);
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     expect(screen.getByTestId("sequence-view")).toBeTruthy();
     await u.click(screen.getByTestId("evtab-tokens"));
@@ -637,9 +638,9 @@ describe("resume after a hand-off", () => {
   test("Back from a2a-lab restores the chat (words and outcomes, not the run), adds a note, selects the use case and cleans the address bar", async () => {
     await boot();
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await within(await screen.findByTestId("turn")).findByTestId("turn-answer");
-    await u.click(within(screen.getByTestId("wtt-away")).getByTestId("wtt-UC2.6"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "UC2.6" } });
     await waitFor(() => expect(screen.getAllByTestId("turn")).toHaveLength(2));
     const stored = window.sessionStorage.getItem(`cal.resume.${workspaceId()}`);
     expect(stored).not.toMatch(/eyJ|"hops"|"tokens"|"raw"/);
@@ -662,11 +663,11 @@ describe("resume after a hand-off", () => {
   test("a plain reload starts fresh; a second Back for the same return adds no second note", async () => {
     await boot();
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     cleanup(); await boot(); // plain reload: no ?returned
     expect(screen.queryAllByTestId("turn")).toHaveLength(0);
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     for (let i = 0; i < 2; i++) { cleanup(); window.history.replaceState(null, "", "/?returned=a2a-lab&uc=UC1"); await boot(); }
     expect(screen.getAllByTestId("turn")).toHaveLength(1);
@@ -676,7 +677,7 @@ describe("resume after a hand-off", () => {
   test("an unknown returned app restores nothing and adds no note; Reset clears the stored chat", async () => {
     await boot();
     const u0 = userEvent.setup();
-    await u0.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     cleanup();
     window.history.replaceState(null, "", "/?returned=evil-app&uc=UC1");
@@ -685,7 +686,7 @@ describe("resume after a hand-off", () => {
     expect(screen.queryAllByTestId("turn")).toHaveLength(0);
     expect(window.location.search).toBe("");
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA1"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA1" } });
     await screen.findByTestId("turn-answer");
     await u.click(screen.getByTestId("reset"));
     await waitFor(() => expect(JSON.parse(window.sessionStorage.getItem(`cal.resume.${workspaceId()}`)).turns).toEqual([]));
@@ -737,7 +738,7 @@ describe("a chat turn is the message and one reply (owner, 2026-11-09)", () => {
     const refusal = { dispatched: false, refused_by: "gateway", outcome: "DENY_403", reason: "insufficient_scope" };
     await boot({ runAnswer: answer(() => ({ outcome: "DENY_403", hops: [...base().slice(0, 3), hopOf(4, "tool-refused", 403, refusal, "deny")] })) });
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA7"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA7" } });
     const turn = await screen.findByTestId("turn");
     await within(turn).findByTestId("turn-answer");
     onlyReply(turn);
@@ -749,7 +750,7 @@ describe("a chat turn is the message and one reply (owner, 2026-11-09)", () => {
   test("a step-up turn keeps its approval card (the hold the customer must act on) and its See evidence control, nothing else", async () => {
     await boot({ runAnswer: answer(() => ({ outcome: "STEP_UP", hops: [...base().slice(0, 3), hopOf(4, "tool-held", 202, { dispatched: false, waiting_for: "STEP_UP", proposed: "I'm ready to move $600 from checking to savings." }, "held")] })) });
     const u = userEvent.setup();
-    await u.click(screen.getByTestId("wtt-MA6"));
+    fireEvent.change(screen.getByTestId("wtt-select"), { target: { value: "MA6" } });
     const turn = await screen.findByTestId("turn");
     const card = await within(turn).findByTestId("turn-approval");
     onlyReply(turn);

@@ -13,34 +13,42 @@ export const verticalHeading = (id, label) => {
 };
 const opensApp = (p) => p.route === "Hand off";
 
-function Chips({ list, onSay, disabled, label, testId }) {
+// One prompt picker: a single collapsed select (owner 2026-11-23, replaces the always-open chip wall).
+// "Runs here" prompts first, then "Opens its own app" ones in their own optgroup.
+function PromptPicker({ prompts, onSay, disabled }) {
+  const here = prompts.filter((p) => !opensApp(p));
+  const away = prompts.filter(opensApp);
+  const opt = (p) => <option key={p.uc} value={p.uc} data-testid={`wtt-opt-${p.uc}`}>{p.uc} · {p.text}</option>;
   return (
-    <ul className="wtt__list" aria-label={label} data-testid={testId}>
-      {list.map((p) => (
-        <li key={p.uc}>
-          <button type="button" className="wtt__chip" onClick={() => onSay(p.text, "chip")} aria-disabled={disabled ? "true" : undefined} title={`${opensApp(p) ? "Hands off" : "Runs"} ${p.uc} ${p.title}`} data-testid={`wtt-${p.uc}`}>{p.text}</button>
-        </li>
-      ))}
-    </ul>
+    <select
+      value=""
+      aria-label="Pick a prompt to run"
+      data-testid="wtt-select"
+      disabled={disabled}
+      onChange={(e) => {
+        const uc = e.target.value;
+        const p = prompts.find((x) => x.uc === uc);
+        if (p) onSay(p.text, "chip");
+        e.target.value = "";
+      }}
+    >
+      <option value="" disabled>Pick a prompt…</option>
+      {here.length > 0 && <optgroup label="Runs here">{here.map(opt)}</optgroup>}
+      {away.length > 0 && <optgroup label="Opens its own app">{away.map(opt)}</optgroup>}
+    </select>
   );
 }
 
-// What to type, per vertical: always visible above the input (owner rule). The prompts that run here come first; the ones whose use case opens
-// its own app sit in their own group. A stub vertical says it has no demo pack yet.
+// What to type, per vertical: always visible above the input (owner rule), as one dropdown (owner 2026-11-23).
+// A stub vertical says it has no demo pack yet.
 export function WhatToType({ prompts, vertical, verticalLabel, stub, onSay, disabled }) {
   const heading = verticalHeading(vertical, verticalLabel);
-  const here = prompts.filter((p) => !opensApp(p));
-  const away = prompts.filter(opensApp);
   return (
     <section className="wtt" aria-label={`What to type, ${heading}`} data-testid="what-to-type">
       <p className="kicker" data-testid="wtt-heading">What to type · {heading}</p>
       {stub ? <p className="muted" data-testid="wtt-stub">{heading}: no demo pack yet. Pick Banking, Healthcare or Retail to chat.</p> : prompts.length === 0 ? <p className="muted">Loading the prompts...</p> : (
         <div className="wtt__groups">
-          <Chips list={here} onSay={onSay} disabled={disabled} label="Runs here" testId="wtt-here" />
-          {away.length > 0 && <>
-            <p className="wtt__group">Opens its own app</p>
-            <Chips list={away} onSay={onSay} disabled={disabled} label="Opens its own app" testId="wtt-away" />
-          </>}
+          <PromptPicker prompts={prompts} onSay={onSay} disabled={disabled} />
         </div>
       )}
     </section>

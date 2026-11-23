@@ -163,13 +163,16 @@
 
 .wtt { margin: 0 0 8px; }
 .wtt .kicker { margin-top: 0; }
+/* The prompt picker: one collapsed select, not every chip on the page at once (owner 2026-11-23). */
 .wtt__groups { display: grid; gap: 4px; } /* never clipped: the agent column grows instead (owner 2026-11-22) */
 .agentcol[data-talking] .wtt__groups { max-height: none; }
 .wtt__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .wtt__group { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); }
 .wtt__chip { min-height: 32px; padding: 3px 10px; border-radius: 999px; font-size: 12px; text-align: left; }
+.wtt select { min-height: 34px; width: 100%; padding: 4px 8px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: inherit; }
 .composer { display: flex; gap: 8px; }
-.composer input { flex: 1 1 auto; min-width: 0; }
+.composer input { flex: 1 1 auto; min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: inherit; }
+.composer input::placeholder { color: var(--muted); }
 
 /* hand-off card; go deeper (a box in the evidence column) */
 .handoff { display: grid; gap: 6px; }
