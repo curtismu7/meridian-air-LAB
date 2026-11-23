@@ -7,3 +7,6 @@ coverage/
 .DS_Store
 .data/
 customer.config.json
+video/out/
+video/take-work/
+video/**/pw-video/
