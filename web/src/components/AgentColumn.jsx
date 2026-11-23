@@ -61,7 +61,7 @@ function Starters({ agent, brand, prompts, onSay, stub }) {
     <div className="starters" data-testid="starters">
       <span className="avatar avatar--agent avatar--big" aria-hidden="true">AI</span>
       <h2 className="starters__title"><span className="step-num" aria-hidden="true">1</span>{agent || "The agent"} at {brand || "the demo company"}</h2>
-      <p className="muted">Type what a customer would say. Each prompt runs one use case and the evidence column draws every hop.</p>
+      <p className="muted">Enter prompt and push send. Each prompt runs one use case and the evidence column draws every hop.</p>
       {!stub && (
         <ul className="starters__grid">
           {prompts.filter((p) => !opensApp(p)).slice(0, 4).map((p) => (
@@ -115,7 +115,7 @@ export default function AgentColumn({ agent, brand, userId, vertical, verticalLa
         <WhatToType prompts={prompts} vertical={vertical} verticalLabel={verticalLabel} stub={stub} onSay={onSay} disabled={running} />
         <form className="composer" onSubmit={send}>
           <label className="sr-only" htmlFor="composer-input">Message the agent</label>
-          <input id="composer-input" type="text" value={text} maxLength={400} onChange={(e) => setText(e.target.value)} placeholder={stub ? "No demo pack for this vertical yet" : "Type what a customer would say"} autoComplete="off" data-testid="composer-input" />
+          <input id="composer-input" type="text" value={text} maxLength={400} onChange={(e) => setText(e.target.value)} placeholder={stub ? "No demo pack for this vertical yet" : "Enter prompt and push send"} autoComplete="off" data-testid="composer-input" />
           <button type="submit" className="primary" aria-disabled={running || !text.trim() ? "true" : undefined} data-testid="composer-send">Send</button>
         </form>
       </div>
