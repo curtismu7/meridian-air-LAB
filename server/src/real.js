@@ -23,6 +23,7 @@ import { createGatewaySession, gatewayUrlProblem, parseAuditTrail } from './mcpC
 import { NEEDS_ACCOUNTS, toolArgs } from './realGate.js';
 import { cibaConfigured } from './ciba.js';
 import { liveSettingsFor } from './settings.js';
+import { listKeys as listRegistryKeys, registryConfig } from './registry.js';
 import { situationOf } from './situations.js';
 import { cleanFree } from './credentials.js';
 import { realExchanges } from './gatewayExchanges.js';
@@ -285,6 +286,13 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
 
   const userOf = (s) => ({ sub: str(s.idClaims?.sub ?? s.claims?.sub, 120), name: str(s.idClaims?.preferred_username ?? s.idClaims?.name ?? s.idClaims?.email ?? config.username, 200), expiresAt: new Date(s.expiresAt).toISOString() });
 
+  // The Real run envelope: one shape for every path (gateway, MA5's registry, MA6's CIBA).
+  const runEnvelope = ({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace, extra = {} }) => ({
+        schema: 'meridian-air-run/1', mode: 'live', kind: 'real', useCase: { id: uc.id, track: uc.track, title: uc.title, maturity: uc.maturity, flag: uc.flag }, vertical,
+        expectedOutcome: uc.expectedOutcome, real: { level: 'full', tool }, labSimulated: false, computed: false, persona: null, outcome, matchesExpected: null, reply, gatewayTrace,
+        hops: hops.map(({ shortTitle, ...h }) => { const e = enrichHop(h, HOP_CATALOG, h.decision ? { decision: h.decision } : undefined, { tokens: 'redact' }); return shortTitle ? { ...e, title: shortTitle } : e; }), tokens, traceId: trace.traceId, traceparent: formatTraceparent(trace.traceId, rootSpan),
+        narration: reply?.text ?? '', ...extra });
+
   // One Real run of a use case the gate let through. session: the workspace's sign-in. Never throws for a refusal by PingOne or the gateway (those
   // are hops with a verdict and a mapped outcome); throws RealRefused('busy') when two Real calls are in flight.
   async function run(uc, { vertical, tool, traceparent, session }) {
@@ -310,6 +318,40 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       // 1. Sign-in (done in the dialog before this run): what happened, and the user's token.
       push({ kind: 'sign-in', label: 'Sign-in [REAL]: pi.flow with the password you typed in the Sign in dialog (no redirect)', from: 'browser', to: 'idp', verdict: 'ok', traceparent: session.steps[0]?.traceparent ?? tp(), note: 'Done once in the Sign in dialog: authorize with response_mode=pi.flow and PKCE S256, the flows API username/password step, then the code for tokens. The password was sent once and is shown nowhere.', request: { steps: session.steps.map((s) => ({ step: s.step, ...s.request })) }, response: { steps: session.steps.map((s) => ({ step: s.step, ...s.response })), user: userOf(session) } });
       addToken('user access token (REAL, from the pi.flow sign-in)', session.accessToken, 'REAL token from your PingOne environment, shown raw for teaching (rule 4). It expires in minutes; secrets and your password are never shown.');
+
+      // MA5's Real path: the badge is the owner's Privilege Agent Registry, read live over the local
+      // console API. The hops show the read and the badge fields (name, scopes, custodian, expiry —
+      // key material only as a hash; the console returns the value unredacted and the lab never does).
+      if (uc.id === 'MA5') {
+        const rcfg = registryConfig(liveSettingsFor());
+        if (!rcfg.ok) {
+          push({ kind: 'gateway-permit', label: 'Agent Registry [REAL]: not configured', from: 'bff', to: 'registry', verdict: 'deny', traceparent: tp(), note: rcfg.problem });
+          finishNotRun(4, `Not run: ${rcfg.problem}`);
+          outcome = 'REAL_NOT_CONFIGURED'; reply = { who: 'Agent', text: `The Agent Registry read is not configured: ${rcfg.problem}` };
+          return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace: [] });
+        }
+        push({ kind: 'personal-agent-lookup', label: "Agent Registry [REAL]: reading the owner's registry over the local console API", from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
+          request: { url: `${rcfg.base}/api/${rcfg.tenant}/v1/agentaccesskeys/default`, note: 'x-procyon-session-id is a correlation id, not a credential; the listener trusts loopback callers' } });
+        let keys = null; let regErr = null;
+        try { keys = await listRegistryKeys(rcfg); } catch (e) { regErr = e; }
+        if (regErr) {
+          push({ kind: 'gateway-permit', label: 'Agent Registry [REAL]: the read was refused', from: 'bff', to: 'registry', verdict: 'deny', traceparent: tp(), note: regErr.message });
+          finishNotRun(4, `Not run: the registry read failed (${regErr.message})`);
+          outcome = 'REAL_REGISTRY_REFUSED'; reply = { who: 'Agent', text: `The Agent Registry refused the read: ${regErr.message}` };
+          return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace: [] });
+        }
+        const shown = keys.filter((k) => !k.revoked).slice(0, 8);
+        push({ kind: 'gateway-permit', label: `Agent Registry [REAL]: ${keys.length} agent keys, ${shown.length} shown (revoked hidden)`, from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
+          response: { badges: shown } });
+        push({ kind: 'agent-reply', label: 'Agent reply [REAL]: the badges, from the live registry', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
+          response: { badges: shown, count: keys.length } });
+        const names = shown.map((k) => k.name).filter(Boolean).slice(0, 4).join(', ');
+        outcome = 'REAL_PERMIT';
+        reply = { who: 'Agent', text: `The Agent Registry holds ${keys.length} agent keys (write-only: shown here as name, scopes, custodian and a hash). Active: ${names}${keys.length > 4 ? ', …' : ''}.` };
+        const env5 = runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace: [] });
+        env5.badges = shown;
+        return env5;
+      }
 
       // 2. Agent token (the actor), with the agent scope.
       const t2 = tp();
@@ -373,12 +415,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
           }
         }
       }
-      return {
-        schema: 'meridian-air-run/1', mode: 'live', kind: 'real', useCase: { id: uc.id, track: uc.track, title: uc.title, maturity: uc.maturity, flag: uc.flag }, vertical,
-        expectedOutcome: uc.expectedOutcome, real: { level: 'full', tool }, labSimulated: false, computed: false, persona: null, outcome, matchesExpected: null, reply, gatewayTrace,
-        hops: hops.map(({ shortTitle, ...h }) => { const e = enrichHop(h, HOP_CATALOG, h.decision ? { decision: h.decision } : undefined, { tokens: 'redact' }); return shortTitle ? { ...e, title: shortTitle } : e; }), tokens, traceId: trace.traceId, traceparent: formatTraceparent(trace.traceId, rootSpan),
-        narration: reply?.text ?? '',
-      };
+      return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace });
     } finally { inFlight -= 1; }
   }
 

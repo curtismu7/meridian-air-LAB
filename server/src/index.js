@@ -3,6 +3,7 @@ import { startHttpServer, createApp } from './app.js';
 import { allPassed, runChecks } from './doctor.js';
 import { assertBindAllowed, bindHost, isLoopbackHost, liveRefusal, resolvePort } from './safety.js';
 import { siemConfig } from './siem.js';
+import { registryConfig } from './registry.js';
 import { defaultMode, deployModeFrom, modeFrom } from './config.js';
 import { applySharedSettings, fullWanted, liveSettingsFor, missingFull, missingIn, takeLiveSettingsFromEnv } from './settings.js';
 import { createReal, realConfig } from './real.js';
@@ -50,6 +51,13 @@ const siem = siemConfig(liveSettings);
 if (siem.ok) {
   const siemHost = new URL(siem.base).hostname;
   if (!isLoopbackHost(siemHost)) guard.allowHost(siemHost);
+}
+// MA5's Agent Registry read (optional): the owner's local Privilege console. The host is allowed only
+// when the owner has explicitly configured it (MA_REGISTRY_*), the same opt-in shape as the SIEM host.
+const registry = registryConfig(liveSettings);
+if (registry.ok) {
+  const regHost = new URL(registry.base).hostname;
+  if (!isLoopbackHost(regHost)) guard.allowHost(regHost);
 }
 // The llama.cpp brain (Step 2, owner opt-in): one origin from MA_BRAIN_URL, loopback or host.docker.internal only. Loopback is already allowed; from Docker the
 // netguard allows host.docker.internal and nothing else. Unset or invalid: no brain, and the page offers Scripted only.

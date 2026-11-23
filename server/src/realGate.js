@@ -8,6 +8,7 @@
 import { isFlow, chainOf } from './flow.js';
 import { toolFor } from './cast.js';
 import { cibaConfigured } from './ciba.js';
+import { registryConfigured } from './registry.js';
 
 export const SE_MCP_TOOLS = new Set([
   'get_my_accounts', 'get_account_balance', 'create_transfer', 'get_sensitive_account_details', 'get_branch_hours', 'request_fee_waiver',
@@ -31,7 +32,7 @@ const PRIVILEGE_LANE = /^(privilege-gateway-leg|credential-swap|enterprise-manag
 const APPROVAL = new Set(['ciba-poll', 'ciba-authorize', 'hitl-receipt']);
 
 // { real: true, tool } or { real: false, reason } (fixed words; the reason names the part that keeps it Mock).
-export function realGate(uc, cast, { cibaOk = cibaConfigured() } = {}) {
+export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = registryConfigured() } = {}) {
   if (!isFlow(uc)) return { real: false, reason: 'it is a guided page: the lab shows it and does not compute it' };
   const chain = chainOf(uc);
   if (uc.track === 'hitl' || chain.some((k) => APPROVAL.has(k))) {
@@ -47,7 +48,12 @@ export function realGate(uc, cast, { cibaOk = cibaConfigured() } = {}) {
   // The chain decides: the catalog's `needs` list names the products the scene's story touches (every Meridian scene touches Privilege),
   // not the hops the engine runs; only a real Privilege-lane hop (credential-swap, id-jag, ...) keeps a use case Mock.
   if (chain.some((k) => PRIVILEGE_LANE.test(k))) return { real: false, reason: 'the Privilege, PingFederate and ID-JAG lanes are not part of this Real path' };
-  if (chain.includes('personal-agent-lookup')) return { real: false, reason: 'the personal-agent lane is not part of this Real path' };
+  if (chain.includes('personal-agent-lookup')) {
+    // MA5 is the one registry scene with a Real path: the badge is read live from the owner's Privilege
+    // Agent Registry (the local console API; MA_REGISTRY_TENANT). Other personal-agent scenes stay Mock.
+    if (uc.id === 'MA5') return registryOk ? { real: true, tool: 'get_loyalty_status' } : { real: false, reason: "the Agent Registry read needs the owner's local console (fill MA_REGISTRY_TENANT in the lab's .env)" };
+    return { real: false, reason: 'the personal-agent lane is not part of this Real path' };
+  }
   if (chain.some((k) => k.startsWith('sim-'))) return { real: false, reason: 'it stages an attack, which only the mock engine can stage' };
   if (uc.flag) return { real: false, reason: `it needs the AI-DEMO2 feature flag ${uc.flag}, which is not known to be on in SE` };
   if (!uc.primaryTool) return { real: false, reason: 'it calls no tool, so there is nothing for the SE MCP server to run' };
