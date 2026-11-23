@@ -48,9 +48,9 @@
    "basis": "the landscape query runs here against the live SIEM; the observability dashboard shows the whole stream deeper"
   },
   "MA10": {
-   "route": "Here",
-   "app": null,
-   "basis": "scene is fully demonstrated in this lab"
+   "route": "Here + go deeper",
+   "app": "id-jag-standalone",
+   "basis": "the scene's hops run here (mock engine); the ID-JAG kit shows the enterprise-managed grant for real"
   },
   "MA11": {
    "route": "Here",

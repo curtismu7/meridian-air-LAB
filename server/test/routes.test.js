@@ -13,12 +13,12 @@ const DATA = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../d
 const raw = (name) => JSON.parse(fs.readFileSync(path.join(DATA, name), 'utf8'));
 const count = (kind) => Object.values(HANDOFF.routes).filter((r) => r.route === kind).length;
 
-test('handoff.json covers exactly the 11 catalog ids, one route each, in the owner counts (9 Here / 2 go deeper / 0 Hand off)', () => {
+test('handoff.json covers exactly the 11 catalog ids, one route each, in the owner counts (8 Here / 3 go deeper / 0 Hand off)', () => {
   const ids = MANIFEST.usecases.map((u) => u.id).sort();
   assert.equal(ids.length, 11);
   assert.deepEqual(Object.keys(HANDOFF.routes).sort(), ids);
   for (const r of Object.values(HANDOFF.routes)) assert.ok(ROUTE_KINDS.includes(r.route), r.route);
-  assert.deepEqual([count('Here'), count('Here + go deeper'), count('Hand off'), count('Guide')], [9, 2, 0, 0]);
+  assert.deepEqual([count('Here'), count('Here + go deeper'), count('Hand off'), count('Guide')], [8, 3, 0, 0]);
 });
 
 test('every Hand off and Here + go deeper row names an app; Here and Guide rows name none; app ids are plain ids', () => {
