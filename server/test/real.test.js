@@ -14,7 +14,10 @@ import { get, post, run, W, withServer } from './helpers.js';
 import { AGENT_AUDIENCE, AGENT_CLIENT_ID, AGENT_CLIENT_SECRET, AGENT_SCOPE, AUDIENCE, CLIENT_SECRET, DEMO_PASSWORD, DEMO_USERNAME, ENV_ID, SCOPE, USER_CLIENT_SECRET, fullSettingsFor, settingsFor, startFakePingOne } from './fakePingone.js';
 import { AUDIT_TRAIL, startFakeGateway } from './fakeGateway.js';
 
-const ENV = { ALLOW_MOCK_SIGNIN: '1' };
+// MA_ENV_FILE: an empty temp settings file, so the gating tests see the pinned defaults (no CIBA/registry/A2A
+// settings leaking in from the repo's own .env, which this checkout legitimately carries for Docker runs).
+const ENV = { ALLOW_MOCK_SIGNIN: '1', MA_ENV_FILE: new URL('./real.test.env', import.meta.url).pathname };
+try { await import('node:fs').then((fs) => fs.writeFileSync(ENV.MA_ENV_FILE, '')); } catch {}
 const TP = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01';
 // Starts both fakes and a lab with full Real; fn(url, { p1, gw, real }). setup(p1): change the fake PingOne before the lab runs (its resources, grants).
 async function withFull(fn, { signin = 'ok', exchange = 'ok', gateway = 'ok', env = ENV, agentScope, settings = {}, setup } = {}) {
@@ -379,11 +382,11 @@ test('sign-in is per workspace; sign-out works', async () => {
 test('use-case gating: only SE mcp-server tools run Real; the rest run Mock in Real mode, every hop MOCK with the reason, with no sign-in needed', async () => {
   const cast = loadCast('/nonexistent', 'banking');
   // cibaOk:false = the CIBA app is not configured (the pinned default; the host .env may carry the settings).
-  const realIds = MANIFEST.usecases.filter((u) => realGate(u, cast, { cibaOk: false, registryOk: false }).real).map((u) => u.id);
+  const realIds = MANIFEST.usecases.filter((u) => realGate(u, cast, { cibaOk: false, registryOk: false, a2aOk: false }).real).map((u) => u.id);
   assert.deepEqual(realIds, ['MA1', 'MA2', 'MA3', 'MA7', 'MA8', 'MA11']);
   // MA6 joins the Real set only when the owner configures the CIBA app (the lab's .env may carry it in Docker runs):
-  assert.deepEqual(MANIFEST.usecases.filter((u) => realGate(u, cast, { cibaOk: true, registryOk: true }).real).map((u) => u.id), ['MA1', 'MA2', 'MA3', 'MA5', 'MA6', 'MA7', 'MA8', 'MA11']);
-  const why = (id) => realGate(findUseCase(id), cast, { cibaOk: false, registryOk: false }).reason;
+  assert.deepEqual(MANIFEST.usecases.filter((u) => realGate(u, cast, { cibaOk: true, registryOk: true, a2aOk: true }).real).map((u) => u.id), ['MA1', 'MA2', 'MA3', 'MA4', 'MA5', 'MA6', 'MA7', 'MA8', 'MA11']);
+  const why = (id) => realGate(findUseCase(id), cast, { cibaOk: false, registryOk: false, a2aOk: false }).reason;
   assert.match(why('MA4'), /A2A/); assert.match(why('MA5'), /Agent Registry/); assert.match(why('MA6'), /CIBA/);
   assert.match(why('MA9'), /guided/); assert.match(why('MA10'), /Privilege/);
   for (const id of realIds) assert.ok(SE_MCP_TOOLS.has(realGate(findUseCase(id), cast).tool));
@@ -391,7 +394,7 @@ test('use-case gating: only SE mcp-server tools run Real; the rest run Mock in R
     await toReal(url);
     const r = await run(url, 'MA4', { vertical: 'banking' });
     assert.equal(r.status, 200); assert.equal(r.body.run.mode, 'mock'); assert.equal(r.body.run.realGate.real, false);
-    assert.ok(r.body.run.hops.filter((h) => h.verdict !== 'skip').every((h) => h.source === 'mock' && /\[MOCK\]/.test(h.label) && /^MOCK in Real mode: agent-to-agent/.test(h.note)));
+    assert.ok(r.body.run.hops.filter((h) => h.verdict !== 'skip').every((h) => h.source === 'mock' && /\[MOCK\]/.test(h.label) && /^MOCK in Real mode: (agent-to-agent|the A2A hop needs)/.test(h.note)));
     assert.equal(gw.seen.length, 0, 'a Mock use case never calls the gateway');
     const list = await (await get(url, '/api/usecases?vertical=banking')).json();
     const uc1 = list.tracks.flatMap((t) => t.usecases).find((u) => u.id === 'MA1'); assert.equal(uc1.realGate.real, true);

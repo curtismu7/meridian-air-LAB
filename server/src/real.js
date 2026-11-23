@@ -24,6 +24,7 @@ import { NEEDS_ACCOUNTS, toolArgs } from './realGate.js';
 import { cibaConfigured } from './ciba.js';
 import { liveSettingsFor } from './settings.js';
 import { listKeys as listRegistryKeys, registryConfig } from './registry.js';
+import { a2aConfig } from './a2a.js';
 import { situationOf } from './situations.js';
 import { cleanFree } from './credentials.js';
 import { realExchanges } from './gatewayExchanges.js';
@@ -319,6 +320,65 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       push({ kind: 'sign-in', label: 'Sign-in [REAL]: pi.flow with the password you typed in the Sign in dialog (no redirect)', from: 'browser', to: 'idp', verdict: 'ok', traceparent: session.steps[0]?.traceparent ?? tp(), note: 'Done once in the Sign in dialog: authorize with response_mode=pi.flow and PKCE S256, the flows API username/password step, then the code for tokens. The password was sent once and is shown nowhere.', request: { steps: session.steps.map((s) => ({ step: s.step, ...s.request })) }, response: { steps: session.steps.map((s) => ({ step: s.step, ...s.response })), user: userOf(session) } });
       addToken('user access token (REAL, from the pi.flow sign-in)', session.accessToken, 'REAL token from your PingOne environment, shown raw for teaching (rule 4). It expires in minutes; secrets and your password are never shown.');
 
+      // MA4's Real path: the partner agent is the owner's AWS AgentCore agent, reached through the
+      // Privilege gateway via the privilege-a2a-anthropic-demo-LAB's endpoint (MA_A2A_URL). The lab
+      // sends the JSON-RPC message/send, the gateway authorizes the delegated chain, AWS runs the
+      // agent, and the reply comes back as SSE. The PERMIT_THEN_DENY story's mismatch probe stays a
+      // lab-instruction hop (labelled as the lab's own check) — the real call is the permit leg.
+      if (uc.id === 'MA4') {
+        const acfg = a2aConfig(liveSettingsFor());
+        if (!acfg.ok) {
+          push({ kind: 'a2a-protocol-message', label: 'A2A [REAL]: not configured', from: 'agent', to: 'a2a', verdict: 'deny', traceparent: tp(), note: acfg.problem });
+          finishNotRun(4, `Not run: ${acfg.problem}`);
+          return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_NOT_CONFIGURED', reply: { who: 'Agent', text: `The A2A hop is not configured: ${acfg.problem}` }, gatewayTrace: [] });
+        }
+        push({ kind: 'a2a-agent-card', label: "A2A [REAL]: the partner agent's card, discovered through the gateway", from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
+          request: { url: `${acfg.url}/.well-known/agent-card.json` } });
+        push({ kind: 'a2a-protocol-bearer', label: 'A2A [REAL]: the delegated chain is presented to the Privilege gateway', from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
+          note: 'the gateway checks the key, the grant and the user-level policy before anything is proxied to AWS' });
+        push({ kind: 'a2a-protocol-message', label: 'A2A [REAL]: message/send to the partner agent over the gateway', from: 'agent', to: 'a2a', verdict: 'held', traceparent: tp(),
+          request: { url: acfg.url, method: 'POST', body: { message: "our partner's agent needs to rebook a stranded passenger" } } });
+        let replyText = null; let a2aErr = null;
+        try {
+          const res = await fetchImpl(acfg.url, {
+            method: 'POST', redirect: 'error',
+            headers: { 'content-type': 'application/json', origin: new URL(acfg.url).origin, accept: 'text/event-stream, application/json' },
+            body: JSON.stringify({ message: 'Our partner agent is stranded: a passenger on UA502 (ORD to LHR) needs a rebooking to the next available flight. Which agent are you, and what can you do?' }),
+            signal: AbortSignal.timeout(120_000),
+          });
+          const text = await res.text();
+          if (res.status !== 200) {
+            a2aErr = `the partner agent answered HTTP ${res.status}: ${text.slice(0, 160)}`;
+          } else if ((res.headers.get('content-type') || '').includes('text/event-stream')) {
+            // SSE: take the last data line that carries the agent's answer (trace events carry the hops).
+            const lines = text.split('\n').filter((l) => l.startsWith('data: '));
+            const parsed = lines.map((l) => { try { return JSON.parse(l.slice(6)); } catch { return null; } }).filter(Boolean);
+            const final = parsed.reverse().find((e) => e?.kind === 'reply' || e?.text || e?.detail);
+            replyText = (typeof final === 'string' ? final : final?.text ?? final?.detail) ?? null;
+            if (!replyText) {
+              const answered = parsed.find((e) => e?.kind === 'message' || e?.result);
+              replyText = answered ? JSON.stringify(answered).slice(0, 400) : null;
+            }
+          } else {
+            try { const j = JSON.parse(text); replyText = j.reply ?? j.text ?? JSON.stringify(j).slice(0, 400); } catch { replyText = text.slice(0, 400); }
+          }
+          if (replyText) replyText = replyText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
+        } catch (e) { a2aErr = e.message; }
+        if (a2aErr) {
+          push({ kind: 'a2a-protocol-message', label: 'A2A [REAL]: the partner call failed', from: 'agent', to: 'a2a', verdict: 'deny', traceparent: tp(), note: a2aErr });
+          finishNotRun(4, `Not run: ${a2aErr}`);
+          return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_A2A_FAILED', reply: { who: 'Agent', text: `The partner agent call failed: ${a2aErr}` }, gatewayTrace: [] });
+        }
+        push({ kind: 'a2a-protocol-message', label: "A2A [REAL]: the partner agent answered through the gateway", from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
+          response: { reply: replyText } });
+        // The story's second act (the mismatch probe) is the lab's own teaching hop, labelled as such.
+        push({ kind: 'a2a-mismatch-probe', label: "Mismatch probe [LAB]: the same key asking for a different app — refused", from: "agent", to: "a2a", verdict: "deny", traceparent: tp(),
+          note: "this probe is the lab's own instruction (the catalog's PERMIT_THEN_DENY); the real leg above is the permit" });
+        push({ kind: 'agent-reply', label: "Agent reply [REAL]: the partner agent's answer, relayed", from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
+          response: { reply: replyText } });
+        const env4 = runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_PERMIT', reply: { who: 'Agent', text: replyText ?? 'The partner agent answered (see the hops).' }, gatewayTrace: [] });
+        return env4;
+      }
       // MA5's Real path: the badge is the owner's Privilege Agent Registry, read live over the local
       // console API. The hops show the read and the badge fields (name, scopes, custodian, expiry —
       // key material only as a hash; the console returns the value unredacted and the lab never does).

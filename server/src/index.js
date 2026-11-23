@@ -4,6 +4,7 @@ import { allPassed, runChecks } from './doctor.js';
 import { assertBindAllowed, bindHost, isLoopbackHost, liveRefusal, resolvePort } from './safety.js';
 import { siemConfig } from './siem.js';
 import { registryConfig } from './registry.js';
+import { a2aConfig } from './a2a.js';
 import { defaultMode, deployModeFrom, modeFrom } from './config.js';
 import { applySharedSettings, fullWanted, liveSettingsFor, missingFull, missingIn, takeLiveSettingsFromEnv } from './settings.js';
 import { createReal, realConfig } from './real.js';
@@ -58,6 +59,12 @@ const registry = registryConfig(liveSettings);
 if (registry.ok) {
   const regHost = new URL(registry.base).hostname;
   if (!isLoopbackHost(regHost)) guard.allowHost(regHost);
+}
+// MA4's partner-agent endpoint (optional): the owner's A2A lab through the shared proxy. Same opt-in shape.
+const a2aCfg = a2aConfig(liveSettings);
+if (a2aCfg.ok) {
+  const a2aHost = new URL(a2aCfg.url).hostname;
+  if (!isLoopbackHost(a2aHost)) guard.allowHost(a2aHost);
 }
 // The llama.cpp brain (Step 2, owner opt-in): one origin from MA_BRAIN_URL, loopback or host.docker.internal only. Loopback is already allowed; from Docker the
 // netguard allows host.docker.internal and nothing else. Unset or invalid: no brain, and the page offers Scripted only.

@@ -78,8 +78,10 @@ export const COMPOSE_ENV = {
     // ... and MA6's Real CIBA (optional): the CIBA app + the approver's login hint (empty = the signed-in user).
     'MA_CIBA_CLIENT_ID', 'MA_CIBA_CLIENT_SECRET', 'MA_CIBA_LOGIN_HINT',
     // ... and MA5's Real Agent Registry read (optional): the local Privilege console.
-    'MA_REGISTRY_URL', 'MA_REGISTRY_TENANT'],
-  fixed: ['PORT', 'MA_BIND', 'MA_PUBLISH', 'ALLOW_MOCK_SIGNIN', 'MA_DEPLOY_MODE', 'MA_LIVE_FROM_ENV'],
+    'MA_REGISTRY_URL', 'MA_REGISTRY_TENANT',
+    // ... and MA4's Real A2A hop (optional): the partner agent endpoint.
+    'MA_A2A_URL'],
+  fixed: ['PORT', 'MA_BIND', 'MA_PUBLISH', 'ALLOW_MOCK_SIGNIN', 'MA_DEPLOY_MODE', 'MA_LIVE_FROM_ENV', 'NODE_EXTRA_CA_CERTS'],
 };
 export function environmentOf(text) {
   const lines = text.split('\n').filter((l) => !l.trimStart().startsWith('#'));
@@ -93,12 +95,13 @@ test('owner 2026-11-09/11-10: no env_file; the container gets exactly the listed
   const compose = here('docker-compose.yml');
   const body = compose.split('\n').filter((l) => !l.trimStart().startsWith('#')).join('\n');
   assert.doesNotMatch(body, /env_file/, 'env_file would copy every .env line into the container');
-  assert.doesNotMatch(body, /volumes:|\.env\b/, 'no settings file is mounted');
+  // A mount is allowed only for a certificate (the fleet CA the Real A2A hop verifies), never a settings file.
+  assert.doesNotMatch(body, /volumes:(?!\s*[^\n]*\.pem)|\.env\b/, 'no settings file is mounted (a .pem CA mount is the one exception)');
   const env = environmentOf(compose);
   assert.deepEqual(Object.keys(env).sort(), [...COMPOSE_ENV.substituted, ...COMPOSE_ENV.fixed].sort(), 'exactly these names, no other');
   for (const k of COMPOSE_ENV.substituted) assert.match(env[k], new RegExp(`^\\$\\{${k}:-[^}$]*\\}$`), `${k} comes from its own name by substitution`);
   for (const k of ['PINGONE_ENVIRONMENT_ID', 'PINGONE_REGION', 'PINGONE_CLIENT_ID', 'PINGONE_CLIENT_SECRET', 'MA_ALLOW_LIVE', ...REAL_KEYS.filter((x) => x.startsWith('MA_'))]) assert.equal(env[k], `\${${k}:-}`, `${k} defaults to empty: a clone with no .env is Mock with Real disabled`);
-  assert.deepEqual(Object.keys(env).filter((k) => /SECRET|PASSWORD|TOKEN|KEY|PINGONE|CLIENT|USERNAME|GATEWAY|AUDIENCE|SCOPE|SIEM|CIBA|REGISTRY|TENANT/.test(k)).sort(), [...REAL_KEYS].sort(), 'no other secret-like name: exactly the Real settings the server reads (SIEM names are the optional evidence-leg settings)');
+  assert.deepEqual(Object.keys(env).filter((k) => /SECRET|PASSWORD|TOKEN|KEY|PINGONE|CLIENT|USERNAME|GATEWAY|AUDIENCE|SCOPE|SIEM|CIBA|REGISTRY|TENANT|A2A/.test(k)).sort(), [...REAL_KEYS].sort(), 'no other secret-like name: exactly the Real settings the server reads (SIEM names are the optional evidence-leg settings)');
   assert.ok(!Object.keys(env).some((k) => /PASSWORD/.test(k)), 'no password is ever passed: the person types it in the Sign in dialog');
 });
 

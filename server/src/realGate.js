@@ -9,6 +9,7 @@ import { isFlow, chainOf } from './flow.js';
 import { toolFor } from './cast.js';
 import { cibaConfigured } from './ciba.js';
 import { registryConfigured } from './registry.js';
+import { a2aConfigured } from './a2a.js';
 
 export const SE_MCP_TOOLS = new Set([
   'get_my_accounts', 'get_account_balance', 'create_transfer', 'get_sensitive_account_details', 'get_branch_hours', 'request_fee_waiver',
@@ -32,7 +33,7 @@ const PRIVILEGE_LANE = /^(privilege-gateway-leg|credential-swap|enterprise-manag
 const APPROVAL = new Set(['ciba-poll', 'ciba-authorize', 'hitl-receipt']);
 
 // { real: true, tool } or { real: false, reason } (fixed words; the reason names the part that keeps it Mock).
-export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = registryConfigured() } = {}) {
+export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = registryConfigured(), a2aOk = a2aConfigured() } = {}) {
   if (!isFlow(uc)) return { real: false, reason: 'it is a guided page: the lab shows it and does not compute it' };
   const chain = chainOf(uc);
   if (uc.track === 'hitl' || chain.some((k) => APPROVAL.has(k))) {
@@ -44,7 +45,12 @@ export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = reg
   }
   if (Object.hasOwn(TRUSTED_FEATURE, uc.id)) return { real: false, reason: `${TRUSTED_FEATURE[uc.id]} is a trusted-caller feature, and this lab never sends trusted-caller headers` };
   if (/\btrat\b|transaction token/i.test(`${uc.title} ${uc.pingOneSolution}`)) return { real: false, reason: 'transaction tokens (TraT) are a trusted-caller feature, and this lab never sends trusted-caller headers' };
-  if (chain.some((k) => A2A.test(k)) || uc.primaryTool === 'get_portfolio_summary') return { real: false, reason: 'agent-to-agent (A2A) multi-hop runs on the agent-service, which is scaled to 0 on SE' };
+  if (chain.some((k) => A2A.test(k)) || uc.primaryTool === 'get_portfolio_summary') {
+    // MA4 is the one A2A scene with a Real path: the partner agent is the owner's AWS AgentCore agent
+    // through the Privilege gateway (MA_A2A_URL). Other A2A scenes stay Mock (the agent-service is scaled to 0).
+    if (uc.id === 'MA4') return a2aOk ? { real: true, tool: 'request_rebooking' } : { real: false, reason: "the A2A hop needs the partner agent endpoint (fill MA_A2A_URL in the lab's .env)" };
+    return { real: false, reason: 'agent-to-agent (A2A) multi-hop runs on the agent-service, which is scaled to 0 on SE' };
+  }
   // The chain decides: the catalog's `needs` list names the products the scene's story touches (every Meridian scene touches Privilege),
   // not the hops the engine runs; only a real Privilege-lane hop (credential-swap, id-jag, ...) keeps a use case Mock.
   if (chain.some((k) => PRIVILEGE_LANE.test(k))) return { real: false, reason: 'the Privilege, PingFederate and ID-JAG lanes are not part of this Real path' };
