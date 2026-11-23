@@ -27,8 +27,8 @@ const SPEC = {
   reply: { none: true, why: "The agent writes its answer from the tool result. Nothing is issued or checked here, so no specification applies.", failure: "Letting the reply quote a token or a raw tool payload back to the customer." },
 };
 
-const USER = { iss: IDP, sub: "alex.morgan", aud: "customer-app-mock", scope: "openid accounts:read transfers:write accounts:sensitive portfolio:read", azp: "customer-app-mock", iat: 1, exp: 301 };
-const DELEGATED = { iss: IDP, sub: "alex.morgan", aud: MCP, scope: "accounts:read", client_id: "concierge-agent", act: { sub: "concierge-agent" }, iat: 4, exp: 304 };
+const USER = { iss: IDP, sub: "alex.morgan", aud: "fabrikam-app-mock", scope: "openid flights:read bookings:write bookings:sensitive rebooking:delegate", azp: "fabrikam-app-mock", iat: 1, exp: 301 };
+const DELEGATED = { iss: IDP, sub: "alex.morgan", aud: MCP, scope: "flights:read", client_id: "concierge-agent", act: { sub: "concierge-agent" }, iat: 4, exp: 304 };
 
 const head = [
   {
@@ -39,8 +39,8 @@ const head = [
   },
   {
     n: 2, kind: "consent", label: "alex.morgan lets concierge-agent act for them", from: "browser", to: "idp", verdict: "ok", mock: true, traceparent: tp("00f067aa0ba902b2"),
-    request: { method: "POST", url: `${IDP}/consents`, headers: { traceparent: tp("00f067aa0ba902b2") }, body: { sub: "alex.morgan", actor: "concierge-agent", scopes: ["accounts:read"], may_act: { sub: "concierge-agent" } } },
-    response: { status: 200, headers: {}, body: { granted: true, may_act: { sub: "concierge-agent" }, scopes: ["accounts:read"] } },
+    request: { method: "POST", url: `${IDP}/consents`, headers: { traceparent: tp("00f067aa0ba902b2") }, body: { sub: "alex.morgan", actor: "concierge-agent", scopes: ["flights:read"], may_act: { sub: "concierge-agent" } } },
+    response: { status: 200, headers: {}, body: { granted: true, may_act: { sub: "concierge-agent" }, scopes: ["flights:read"] } },
     title: "Consent", narrative: "The customer consents, and the identity provider records may_act naming the agent.", fact: "may_act names the agent", spec: SPEC.consent,
     kv: [["may_act.sub", "concierge-agent"]],
   },
@@ -53,8 +53,8 @@ const head = [
   {
     n: 4, kind: "token-exchange", label: "Token exchange (RFC 8693): user token + agent token", from: "bff", to: "idp", verdict: "ok", mock: true, traceparent: tp("00f067aa0ba902b4"),
     note: 'act claim names the agent: {"sub":"concierge-agent"}',
-    request: { method: "POST", url: `${IDP}/token`, headers: { traceparent: tp("00f067aa0ba902b4") }, body: { grant_type: "urn:ietf:params:oauth:grant-type:token-exchange", subject_token: "[redacted]", actor_token: "[redacted]", audience: MCP, scope: "accounts:read" } },
-    response: { status: 200, headers: {}, body: { access_token: "[redacted]", issued_token_type: "urn:ietf:params:oauth:token-type:access_token", token_type: "Bearer", expires_in: 300, scope: "accounts:read" } },
+    request: { method: "POST", url: `${IDP}/token`, headers: { traceparent: tp("00f067aa0ba902b4") }, body: { grant_type: "urn:ietf:params:oauth:grant-type:token-exchange", subject_token: "[redacted]", actor_token: "[redacted]", audience: MCP, scope: "flights:read" } },
+    response: { status: 200, headers: {}, body: { access_token: "[redacted]", issued_token_type: "urn:ietf:params:oauth:token-type:access_token", token_type: "Bearer", expires_in: 300, scope: "flights:read" } },
     title: "Exchange", narrative: "The back end swaps the customer token for one that names concierge-agent in act. The scope is cut to the one thing this request needs.", fact: "scope narrowed 4 → 1", spec: SPEC.exchange,
     claimDiff: { before: USER, after: DELEGATED, changed: ["aud", "scope", "client_id", "act", "azp"] },
     kv: [["grant_type", "token-exchange"], ["subject_token_type", "access_token"], ["actor_token_type", "access_token"]],
@@ -70,7 +70,7 @@ const gatewayOk = {
     { name: "Signature", result: "pass", note: "ES256, key from the mock JWKS" },
     { name: "Audience", result: "pass", note: "mcp.fabrikam.example" },
     { name: "act present", result: "pass", note: "concierge-agent" },
-    { name: "Scope", result: "pass", note: "accounts:read covers the balance read" },
+    { name: "Scope", result: "pass", note: "flights:read covers the itinerary read" },
   ],
 };
 
@@ -104,12 +104,12 @@ export const UC1_DENY_RUN = [
   ...head.slice(0, 3),
   { ...head[3], fact: "act +concierge-agent", claimDiff: { before: USER, after: { ...DELEGATED, scope: "openid" }, changed: ["aud", "scope", "client_id", "act", "azp"] }, kv: [["grant_type", "token-exchange"]] },
   {
-    ...gatewayOk, verdict: "deny", fact: "denied", narrative: "The gateway refuses the call: the token does not carry accounts:read.",
+    ...gatewayOk, verdict: "deny", fact: "denied", narrative: "The gateway refuses the call: the token does not carry flights:read.",
     response: { status: 403, headers: { "www-authenticate": 'Bearer error="insufficient_scope"' }, body: { error: "insufficient_scope" } },
     stages: [
       { name: "Signature", result: "pass", note: "ES256, key from the mock JWKS" },
       { name: "Audience", result: "pass", note: "mcp.fabrikam.example" },
-      { name: "Scope", result: "fail", note: "the token does not carry accounts:read" },
+      { name: "Scope", result: "fail", note: "the token does not carry flights:read" },
       { name: "Edge policy", result: "skip", note: "not reached" },
     ],
   },

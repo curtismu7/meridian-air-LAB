@@ -205,7 +205,7 @@ describe("step detail", () => {
     render(<StepDetailPanel hops={UC1_DENY_RUN} selected={5} onSelect={() => {}} />);
     expect(screen.getByTestId("sdp-status").textContent).toBe("denied");
     const items = [...screen.getByTestId("stages").querySelectorAll("li")].map((li) => li.textContent);
-    expect(items[2]).toBe("failScopethe token does not carry accounts:read (stopped here)");
+    expect(items[2]).toBe("failScopethe token does not carry flights:read (stopped here)");
     expect(items.filter((t) => t.includes("stopped here"))).toHaveLength(1);
     expect(screen.getByLabelText("Step 5 response").textContent).toMatch(/"status": 403/);
   });
@@ -230,9 +230,9 @@ describe("step detail", () => {
   });
 
   test("a stage note that already says it stopped there (the engine writes that) is not doubled", () => {
-    const hops = [{ ...UC1_DENY_RUN[4], stages: [{ name: "Scope", result: "fail", note: "the token does not carry accounts:read (stopped here)" }] }];
+    const hops = [{ ...UC1_DENY_RUN[4], stages: [{ name: "Scope", result: "fail", note: "the token does not carry flights:read (stopped here)" }] }];
     render(<StepDetailPanel hops={hops} selected={5} onSelect={() => {}} />);
-    expect(screen.getByTestId("stages").textContent).toBe("failScopethe token does not carry accounts:read (stopped here)");
+    expect(screen.getByTestId("stages").textContent).toBe("failScopethe token does not carry flights:read (stopped here)");
   });
 
   test("a hop that alters nothing says so", () => {

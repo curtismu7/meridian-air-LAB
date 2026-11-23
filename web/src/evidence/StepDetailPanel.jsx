@@ -153,10 +153,10 @@ export default function StepDetailPanel({ hops = [], selected = null, onSelect, 
 
         <div className="sdp__col">
           <h4>Request</h4>
-          {recorded(h.request) ? <Json value={h.request} label={`Step ${h.n} request`} hot={HOP_HOT} /> : <p className="ev-muted">No request recorded.</p>}
+          {recorded(h.request) ? <Json value={h.request} label={`Step ${h.n} request`} hot={HOP_HOT} decode={false} /> : <p className="ev-muted">No request recorded.</p>}
           <h4>Response</h4>
           {recorded(h.response) ? <Json value={h.response} label={`Step ${h.n} response`} hot={HOP_HOT} decode={false} /> : <p className="ev-muted">No response recorded.</p>}
-          <DecodedTokens value={[h.request, h.response]} label={`Step ${h.n}`} />
+          <DecodedTokens value={h.request} label={`Step ${h.n}`} />
           {h.traceparent && <p className="ev-muted">traceparent <span className="ev-mono">{txt(h.traceparent)}</span></p>}
         </div>
 

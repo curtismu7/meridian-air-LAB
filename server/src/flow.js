@@ -20,7 +20,7 @@ import HOP_CATALOG from './vendor/hop-catalog.json' with { type: 'json' };
 export const ENGINE_OUTCOMES = new Set(['PERMIT', 'DENY', 'DENY_401', 'DENY_403', 'DENY_429', 'DENY_503', 'STEP_UP', 'HITL_REQUIRED', 'PERMIT_THEN_DENY', 'DELEGATE_AND_EXECUTE']);
 const T0 = 1767225600; // 2026-01-01T00:00:00Z, the lab's fixed clock
 const TTL = 300;
-const SCOPE_FOR_ROLE = { read: 'accounts:read', write: 'transfers:write', sensitive: 'accounts:sensitive', a2a: 'portfolio:read' };
+const SCOPE_FOR_ROLE = { read: 'flights:read', write: 'bookings:write', sensitive: 'bookings:sensitive', a2a: 'rebooking:delegate' };
 const sha = (s, n = 16) => createHash('sha256').update(String(s)).digest('hex').slice(0, n);
 
 // A use case is computed by the engine when its outcome is one the engine can produce and it has something to compute (not a bare learning link).
@@ -81,8 +81,8 @@ const halt = (ctx, outcome, by, status, reason) => { if (!ctx.halted) ctx.halted
 // ---- step builders ---------------------------------------------------------------------------------------------------------------------------------
 function signIn(ctx) {
   const p = ctx.person;
-  const scope = 'openid accounts:read transfers:write accounts:sensitive portfolio:read';
-  const t = mint(ctx, 'user token (MOCK)', { sub: p.sub, aud: 'customer-app-mock', scope, groups: p.groups, amr: ['pwd'], azp: 'customer-app-mock' }, 'JWT');
+  const scope = 'openid flights:read bookings:write bookings:sensitive rebooking:delegate';
+  const t = mint(ctx, 'user token (MOCK)', { sub: p.sub, aud: `${ctx.cast.castHost}-app-mock`, scope, groups: p.groups, amr: ['pwd'], azp: `${ctx.cast.castHost}-app-mock` }, 'JWT');
   ctx.user = t;
   hop(ctx, 'sign-in', {
     from: 'browser', to: 'idp', url: `${ctx.urls.idp}/flows/mock-signin`, headers: { 'content-type': 'application/json' },
@@ -159,7 +159,7 @@ function gatewayCheck(ctx, { again = false, key = 'gateway-check' } = {}) {
   if (ctx.event === 'introspection-down') fail('DENY_503', 503, 'validation_unavailable', 'the token validation endpoint did not answer (simulated, no network); the gateway fails closed');
   else if (!sig.ok) fail('DENY_401', 401, 'invalid_signature', 'the token signature does not verify');
   else pass('signature');
-  if (!verdict) { if (claims.aud && ![ctx.urls.mcp, 'customer-app-mock'].includes(claims.aud)) fail('DENY_401', 401, 'invalid_audience', 'aud does not name this gateway'); else pass('aud'); }
+  if (!verdict) { if (claims.aud && ![ctx.urls.mcp, `${ctx.cast.castHost}-app-mock`].includes(claims.aud)) fail('DENY_401', 401, 'invalid_audience', 'aud does not name this gateway'); else pass('aud'); }
   if (!verdict && agentMediated && !claims.act) fail('DENY_401', 401, 'missing_act', 'an agent-mediated call must carry an act claim');
   else if (!verdict && agentMediated) pass('act');
   if (!verdict && claims.cnf?.jkt) {

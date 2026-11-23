@@ -126,9 +126,17 @@
 .sdp__diff tr[data-changed="true"] td { box-shadow: inset 3px 0 0 var(--status-ok); font-weight: 700; }
 .sdp__chg { color: var(--status-ok); font-family: var(--font-primary); font-size: 0.85em; font-weight: 700; }
 @media (min-width: 900px) {
-  .sdp__cols[data-rfc="on"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr); }
+  /* The raw request/response and its decoded tokens need width: below 1200px the evidence column is
+     too narrow for three side-by-side columns, so the RFC column drops under the wire columns. */
+  .sdp__cols[data-rfc="on"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
   .sdp__cols[data-rfc="off"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  .sdp__cols[data-rfc="on"] .sdp__rfc { grid-column: 1 / -1; padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 12px; }
   .sdp__rfc { padding-left: 16px; border-left: 1px solid var(--border); }
+}
+@media (min-width: 1500px) {
+  /* Full width: three columns fit again. */
+  .sdp__cols[data-rfc="on"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr) minmax(0, 0.9fr); }
+  .sdp__cols[data-rfc="on"] .sdp__rfc { grid-column: auto; padding-left: 16px; border-left: 1px solid var(--border); border-top: none; padding-top: 0; }
 }
 @media (max-width: 600px) {
   .sq-bar { gap: 4px; padding: 6px; }
