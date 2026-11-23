@@ -24,6 +24,6 @@ Basis: scene fully demonstrated here (9), the lab shows the flow deeper (2).
 | MA6 | The $4,000 refund — CIBA with PingID approval | hitl | Here |  | scene is fully demonstrated in this lab | verified |  |
 | MA7 | The attack — AI Guard blocks prompt injection | attacks | Here |  | scene is fully demonstrated in this lab | verified |  |
 | MA8 | Gold data stays gold — fine-grained authorization | controls | Here |  | scene is fully demonstrated in this lab | verified |  |
-| MA9 | Govern and audit — the whole landscape | demo | Hand off | agentcore-pingone-demo | the governance/agentcore lab shows this deeper | verified | guided scene: the governance/agentcore lab shows this deeper |
+| MA9 | Govern and audit — the whole landscape | demo | Here + go deeper | observability-lab | the landscape query runs here against the live SIEM; the observability dashboard shows the whole stream deeper | verified | guided scene: the landscape query runs here; the dashboard shows the stream deeper |
 | MA10 | Keys never touch the agents — the credential broker | nhi | Here |  | scene is fully demonstrated in this lab | verified |  |
 | MA11 | The auditor asks Elasticsearch — evidence by marker | demo | Here |  | scene is fully demonstrated in this lab | verified |  |

@@ -10,6 +10,7 @@ import { toolFor } from './cast.js';
 import { cibaConfigured } from './ciba.js';
 import { registryConfigured } from './registry.js';
 import { a2aConfigured } from './a2a.js';
+import { siemConfigured } from './siem.js';
 
 export const SE_MCP_TOOLS = new Set([
   'get_my_accounts', 'get_account_balance', 'create_transfer', 'get_sensitive_account_details', 'get_branch_hours', 'request_fee_waiver',
@@ -33,7 +34,10 @@ const PRIVILEGE_LANE = /^(privilege-gateway-leg|credential-swap|enterprise-manag
 const APPROVAL = new Set(['ciba-poll', 'ciba-authorize', 'hitl-receipt']);
 
 // { real: true, tool } or { real: false, reason } (fixed words; the reason names the part that keeps it Mock).
-export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = registryConfigured(), a2aOk = a2aConfigured() } = {}) {
+export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = registryConfigured(), a2aOk = a2aConfigured(), siemOk = siemConfigured() } = {}) {
+  // MA9 is the one guided scene with a Real path: the landscape query runs against the live SIEM
+  // (MA_SIEM_*), the same stream MA11 reads. Other guided pages stay Mock (the lab shows, not computes).
+  if (uc.id === 'MA9') return siemOk ? { real: true, tool: null } : { real: false, reason: "its landscape query needs the SIEM (fill the MA_SIEM_* settings in the lab's .env)" };
   if (!isFlow(uc)) return { real: false, reason: 'it is a guided page: the lab shows it and does not compute it' };
   const chain = chainOf(uc);
   if (uc.track === 'hitl' || chain.some((k) => APPROVAL.has(k))) {

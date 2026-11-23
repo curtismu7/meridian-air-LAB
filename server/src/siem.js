@@ -14,6 +14,8 @@ const TIMEOUT_MS = 8_000;
 const MAX_BYTES = 256 * 1024;
 
 // The settings' presence check: all or none. Returns { ok, problem } in fixed words (never a value).
+export const siemConfigured = (live) => siemConfig(live ?? {}).ok;
+
 export function siemConfig(settings = {}) {
   const url = typeof settings.MA_SIEM_URL === 'string' ? settings.MA_SIEM_URL.trim() : '';
   const key = typeof settings.MA_SIEM_READ_APIKEY === 'string' ? settings.MA_SIEM_READ_APIKEY.trim() : '';

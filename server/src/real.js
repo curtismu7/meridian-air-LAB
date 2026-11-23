@@ -25,6 +25,7 @@ import { cibaConfigured } from './ciba.js';
 import { liveSettingsFor } from './settings.js';
 import { listKeys as listRegistryKeys, registryConfig } from './registry.js';
 import { a2aConfig } from './a2a.js';
+import { siemConfig, findEvidence, SIEM_INDEX } from './siem.js';
 import { situationOf } from './situations.js';
 import { cleanFree } from './credentials.js';
 import { realExchanges } from './gatewayExchanges.js';
@@ -320,6 +321,48 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       push({ kind: 'sign-in', label: 'Sign-in [REAL]: pi.flow with the password you typed in the Sign in dialog (no redirect)', from: 'browser', to: 'idp', verdict: 'ok', traceparent: session.steps[0]?.traceparent ?? tp(), note: 'Done once in the Sign in dialog: authorize with response_mode=pi.flow and PKCE S256, the flows API username/password step, then the code for tokens. The password was sent once and is shown nowhere.', request: { steps: session.steps.map((s) => ({ step: s.step, ...s.request })) }, response: { steps: session.steps.map((s) => ({ step: s.step, ...s.response })), user: userOf(session) } });
       addToken('user access token (REAL, from the pi.flow sign-in)', session.accessToken, 'REAL token from your PingOne environment, shown raw for teaching (rule 4). It expires in minutes; secrets and your password are never shown.');
 
+      // MA9's Real path: the landscape query runs against the live SIEM (MA_SIEM_*) — the same stream
+      // MA11 reads, but without a marker: this is the whole last window of the gateway's verdicts,
+      // counted by kind. The guided page itself stays a link-out (labelled [LAB]).
+      const obsUrl = liveSettingsFor().MA_OBS_URL || '';
+      if (uc.id === 'MA9') {
+        const sc = siemConfig(liveSettingsFor());
+        if (!sc.ok) {
+          push({ kind: 'personal-agent-lookup', label: 'Landscape query [REAL]: not configured', from: 'agent', to: 'siem', verdict: 'deny', traceparent: tp(), note: sc.problem });
+          finishNotRun(4, `Not run: ${sc.problem}`);
+          return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_NOT_CONFIGURED', reply: { who: 'Agent', text: `The landscape query is not configured: ${sc.problem}` }, gatewayTrace: [] });
+        }
+        push({ kind: 'personal-agent-lookup', label: "Landscape query [REAL]: the gateway's verdict stream, last 15 minutes", from: 'agent', to: 'siem', verdict: 'held', traceparent: tp(),
+          request: { url: `${sc.base}/${encodeURIComponent(SIEM_INDEX)}/_search`, method: 'POST', body: { query: { range: { '@timestamp': { gte: 'now-15m' } } } } } });
+        const counts = { permit: 0, deny: 0, other: 0 };
+        let siemErr = null; let hits = [];
+        try {
+          const from = Date.now() - 15 * 60_000;
+          const near = await findEvidence({ cfg: sc, marker: '*', from, to: Date.now() + 60_000 });
+          if (near.kind === 'ok') hits = near.hits ?? [];
+          else if (near.kind === 'empty') hits = near.inferred ?? [];
+          else siemErr = near.note ?? 'the SIEM read failed';
+          for (const h of hits) {
+            const msg = String(h.source?.Message ?? '').toLowerCase();
+            if (msg.includes('permit')) counts.permit += 1;
+            else if (msg.includes('deny') || msg.includes('denied') || msg.includes('policy')) counts.deny += 1;
+            else counts.other += 1;
+          }
+        } catch (e) { siemErr = e.message; }
+        if (siemErr) {
+          push({ kind: 'personal-agent-lookup', label: 'Landscape query [REAL]: the SIEM read failed', from: 'agent', to: 'siem', verdict: 'deny', traceparent: tp(), note: siemErr });
+          finishNotRun(4, `Not run: ${siemErr}`);
+          return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_SIEM_FAILED', reply: { who: 'Agent', text: `The landscape query failed: ${siemErr}` }, gatewayTrace: [] });
+        }
+        push({ kind: 'personal-agent-lookup', label: "Landscape query [REAL]: verdicts counted from the live stream", from: 'agent', to: 'siem', verdict: 'ok', traceparent: tp(),
+          response: { window: '15m', counts, sample: hits.slice(0, 5).map((h) => String(h.source?.Message ?? '').slice(0, 120)) } });
+        // The compliance mappings and the dashboard are the guided page: shown as a link, labelled as the lab's guide.
+        push({ kind: 'gateway-permit', label: 'Govern page [LAB]: MITRE ATLAS / OWASP LLM / NIST mappings and the dashboard', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
+          note: `this page is the lab's guide; the deep-dive lives in observability-LAB${obsUrl ? ` (${obsUrl})` : ''}` });
+        const env9 = runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_PERMIT',
+          reply: { who: 'Agent', text: `The gateway's verdict stream, last 15 minutes: ${counts.permit} permit, ${counts.deny} deny/denied-policy, ${counts.other} other records (the full landscape query lives in observability-LAB${obsUrl ? ` — ${obsUrl}` : ''}).` }, gatewayTrace: [] });
+        return env9;
+      }
       // MA4's Real path: the partner agent is the owner's AWS AgentCore agent, reached through the
       // Privilege gateway via the privilege-a2a-anthropic-demo-LAB's endpoint (MA_A2A_URL). The lab
       // sends the JSON-RPC message/send, the gateway authorizes the delegated chain, AWS runs the

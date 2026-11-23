@@ -28,6 +28,7 @@ import { createReal, RealRefused, REDIRECT_URI } from './real.js';
 import { realGate } from './realGate.js';
 import { siemConfig, findEvidence, markerFor } from './siem.js';
 import { cibaConfigured } from './ciba.js';
+import { siemConfigured } from './siem.js';
 import { registryConfigured } from './registry.js';
 import { a2aConfigured } from './a2a.js';
 import { shelfInfo } from './shelfLink.js';
@@ -107,7 +108,7 @@ export function createApp({
   // while none of the full-Real settings is set) or null. Once any MA_* full-Real setting is there, the old path is ignored entirely.
   const gateOpts = () => {
     const ls = liveSettingsFor(env);
-    return { cibaOk: cibaConfigured(ls), registryOk: registryConfigured(ls), a2aOk: a2aConfigured(ls) };
+    return { cibaOk: cibaConfigured(ls), registryOk: registryConfigured(ls), a2aOk: a2aConfigured(ls), siemOk: siemConfigured(ls) };
   };
   const realLevel = () => (real.configured() ? 'full' : real.wanted() ? null : live.configured() ? 'idp-only' : null);
   const realRefusal = (req) => liveRefusal(guardCtx(req)) ?? (realLevel() ? null : notConfiguredText(real.missing(), real.problem()));

@@ -51,6 +51,7 @@ services:
       MA_REGISTRY_URL: ${MA_REGISTRY_URL:-}
       MA_REGISTRY_TENANT: ${MA_REGISTRY_TENANT:-}
       MA_A2A_URL: ${MA_A2A_URL:-}
+      MA_OBS_URL: ${MA_OBS_URL:-}
       MA_LAB_MODE: ${MA_LAB_MODE:-mock}
       MA_BRAIN_URL: ${MA_BRAIN_URL:-}
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-meridian-air.local.ping-devops.com}

@@ -80,7 +80,8 @@ export const COMPOSE_ENV = {
     // ... and MA5's Real Agent Registry read (optional): the local Privilege console.
     'MA_REGISTRY_URL', 'MA_REGISTRY_TENANT',
     // ... and MA4's Real A2A hop (optional): the partner agent endpoint.
-    'MA_A2A_URL'],
+    'MA_A2A_URL',
+    'MA_OBS_URL'],
   fixed: ['PORT', 'MA_BIND', 'MA_PUBLISH', 'ALLOW_MOCK_SIGNIN', 'MA_DEPLOY_MODE', 'MA_LIVE_FROM_ENV', 'NODE_EXTRA_CA_CERTS'],
 };
 export function environmentOf(text) {
@@ -101,7 +102,7 @@ test('owner 2026-11-09/11-10: no env_file; the container gets exactly the listed
   assert.deepEqual(Object.keys(env).sort(), [...COMPOSE_ENV.substituted, ...COMPOSE_ENV.fixed].sort(), 'exactly these names, no other');
   for (const k of COMPOSE_ENV.substituted) assert.match(env[k], new RegExp(`^\\$\\{${k}:-[^}$]*\\}$`), `${k} comes from its own name by substitution`);
   for (const k of ['PINGONE_ENVIRONMENT_ID', 'PINGONE_REGION', 'PINGONE_CLIENT_ID', 'PINGONE_CLIENT_SECRET', 'MA_ALLOW_LIVE', ...REAL_KEYS.filter((x) => x.startsWith('MA_'))]) assert.equal(env[k], `\${${k}:-}`, `${k} defaults to empty: a clone with no .env is Mock with Real disabled`);
-  assert.deepEqual(Object.keys(env).filter((k) => /SECRET|PASSWORD|TOKEN|KEY|PINGONE|CLIENT|USERNAME|GATEWAY|AUDIENCE|SCOPE|SIEM|CIBA|REGISTRY|TENANT|A2A/.test(k)).sort(), [...REAL_KEYS].sort(), 'no other secret-like name: exactly the Real settings the server reads (SIEM names are the optional evidence-leg settings)');
+  assert.deepEqual(Object.keys(env).filter((k) => /SECRET|PASSWORD|TOKEN|KEY|PINGONE|CLIENT|USERNAME|GATEWAY|AUDIENCE|SCOPE|SIEM|CIBA|REGISTRY|TENANT|A2A|OBS/.test(k)).sort(), [...REAL_KEYS].sort(), 'no other secret-like name: exactly the Real settings the server reads (SIEM names are the optional evidence-leg settings)');
   assert.ok(!Object.keys(env).some((k) => /PASSWORD/.test(k)), 'no password is ever passed: the person types it in the Sign in dialog');
 });
 

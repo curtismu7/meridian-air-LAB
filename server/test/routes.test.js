@@ -13,12 +13,12 @@ const DATA = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../d
 const raw = (name) => JSON.parse(fs.readFileSync(path.join(DATA, name), 'utf8'));
 const count = (kind) => Object.values(HANDOFF.routes).filter((r) => r.route === kind).length;
 
-test('handoff.json covers exactly the 11 catalog ids, one route each, in the owner counts (9 Here / 1 go deeper / 1 Hand off)', () => {
+test('handoff.json covers exactly the 11 catalog ids, one route each, in the owner counts (9 Here / 2 go deeper / 0 Hand off)', () => {
   const ids = MANIFEST.usecases.map((u) => u.id).sort();
   assert.equal(ids.length, 11);
   assert.deepEqual(Object.keys(HANDOFF.routes).sort(), ids);
   for (const r of Object.values(HANDOFF.routes)) assert.ok(ROUTE_KINDS.includes(r.route), r.route);
-  assert.deepEqual([count('Here'), count('Here + go deeper'), count('Hand off'), count('Guide')], [9, 1, 1, 0]);
+  assert.deepEqual([count('Here'), count('Here + go deeper'), count('Hand off'), count('Guide')], [9, 2, 0, 0]);
 });
 
 test('every Hand off and Here + go deeper row names an app; Here and Guide rows name none; app ids are plain ids', () => {
@@ -27,7 +27,7 @@ test('every Hand off and Here + go deeper row names an app; Here and Guide rows 
     else assert.equal(r.app, null, id);
   }
   assert.deepEqual(routeOf('MA4'), { route: 'Here + go deeper', app: 'meridian-a2a-hop', basis: 'the A2A hop lab shows this flow deeper' });
-  assert.deepEqual(routeOf('MA9'), { route: 'Hand off', app: 'agentcore-pingone-demo', basis: 'the governance/agentcore lab shows this deeper' });
+  assert.deepEqual(routeOf('MA9'), { route: 'Here + go deeper', app: 'observability-lab', basis: 'the landscape query runs here against the live SIEM; the observability dashboard shows the whole stream deeper' });
   assert.equal(routeOf('__proto__').route, 'Here', 'an unknown id is never a key lookup on the object prototype');
 });
 
@@ -40,14 +40,18 @@ test('the route validator refuses a missing id, an extra id, a Hand off without 
   const bad = structuredClone(good); bad.routes.MA3.route = 'Elsewhere'; assert.match(validateRoutes(bad).join(), /MA3: route out of range/);
 });
 
-test('MA9 offers a second app; `also` is refused off a Hand off row, when not an id, or when it repeats the app', () => {
+test('`also` is a second app on a Hand off row only; refused off any other route, when not an id, or when it repeats the app', () => {
   const good = raw('handoff.json');
-  const also = structuredClone(good); also.routes.MA9.also = 'meridian-a2a-hop';
+  // No row in the shipped table is Hand off any more (MA9's landscape query runs here now); make one synthetic.
+  const handoff = structuredClone(good); handoff.routes.MA9.route = 'Hand off'; handoff.routes.MA9.app = 'agentcore-pingone-demo';
+  assert.deepEqual(validateRoutes(handoff), []);
+  const also = structuredClone(handoff); also.routes.MA9.also = 'meridian-a2a-hop';
   assert.deepEqual(validateRoutes(also), []);
   assert.equal(also.routes.MA9.also, 'meridian-a2a-hop');
   const onHere = structuredClone(good); onHere.routes.MA1.also = 'agentcore-pingone-demo'; assert.match(validateRoutes(onHere).join(), /MA1: also is not a second app/);
-  const notId = structuredClone(good); notId.routes.MA9.also = 'https://x.invalid/'; assert.match(validateRoutes(notId).join(), /MA9: also/);
-  const same = structuredClone(good); same.routes.MA9.also = 'agentcore-pingone-demo'; assert.match(validateRoutes(same).join(), /MA9: also/);
+  const onDeeper = structuredClone(good); onDeeper.routes.MA9.also = 'meridian-a2a-hop'; assert.match(validateRoutes(onDeeper).join(), /MA9: also is not a second app/);
+  const notId = structuredClone(handoff); notId.routes.MA9.also = 'https://x.invalid/'; assert.match(validateRoutes(notId).join(), /MA9: also/);
+  const same = structuredClone(handoff); same.routes.MA9.also = 'agentcore-pingone-demo'; assert.match(validateRoutes(same).join(), /MA9: also/);
 });
 
 test('airlines prompts are the catalog chip text verbatim', () => {
@@ -61,7 +65,7 @@ test('airlines prompts are the catalog chip text verbatim', () => {
 test('every shown prompt runs here or hands off; either way, in its vertical the engine (or Preview here) reaches the catalog outcome', () => {
   for (const [vertical, list] of Object.entries(PROMPTS.verticals)) {
     assert.ok(list.filter((e) => routeOf(e.uc).route !== 'Hand off').length >= 8, `${vertical}: at least eight prompts run here`);
-    assert.ok(list.filter((e) => routeOf(e.uc).route === 'Hand off').length >= 1, `${vertical}: at least one prompt opens its own app`);
+    assert.ok(list.filter((e) => ['Hand off', 'Here + go deeper'].includes(routeOf(e.uc).route)).length >= 1, `${vertical}: at least one prompt goes deeper or hands off`);
     for (const e of list) {
       const uc = findUseCase(e.uc);
       assert.ok(['Here', 'Here + go deeper', 'Hand off'].includes(routeOf(uc.id).route), `${vertical} ${e.uc} runs here or hands off (never a guide)`);

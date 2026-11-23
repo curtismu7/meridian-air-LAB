@@ -1,61 +1,61 @@
 {
-  "schema": "meridian-air-handoff/1",
-  "source": "Meridian Air lab routes. Route: Here | Here + go deeper | Hand off | Guide. app: the shelf id of the standalone that covers it (null while none is chosen). basis: why that app was picked.",
-  "routes": {
-    "MA1": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA2": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA3": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA4": {
-      "route": "Here + go deeper",
-      "app": "meridian-a2a-hop",
-      "basis": "the A2A hop lab shows this flow deeper"
-    },
-    "MA5": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA6": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA7": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA8": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA9": {
-      "route": "Hand off",
-      "app": "agentcore-pingone-demo",
-      "basis": "the governance/agentcore lab shows this deeper"
-    },
-    "MA10": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    },
-    "MA11": {
-      "route": "Here",
-      "app": null,
-      "basis": "scene is fully demonstrated in this lab"
-    }
+ "schema": "meridian-air-handoff/1",
+ "source": "Meridian Air lab routes. Route: Here | Here + go deeper | Hand off | Guide. app: the shelf id of the standalone that covers it (null while none is chosen). basis: why that app was picked.",
+ "routes": {
+  "MA1": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA2": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA3": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA4": {
+   "route": "Here + go deeper",
+   "app": "meridian-a2a-hop",
+   "basis": "the A2A hop lab shows this flow deeper"
+  },
+  "MA5": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA6": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA7": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA8": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA9": {
+   "route": "Here + go deeper",
+   "app": "observability-lab",
+   "basis": "the landscape query runs here against the live SIEM; the observability dashboard shows the whole stream deeper"
+  },
+  "MA10": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
+  },
+  "MA11": {
+   "route": "Here",
+   "app": null,
+   "basis": "scene is fully demonstrated in this lab"
   }
+ }
 }
