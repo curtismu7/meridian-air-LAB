@@ -53,6 +53,39 @@ const resultKey = (id, vertical, persona, mode) => `${id}|${vertical}|${persona}
 const focusHop = (run) => (run?.hops || []).find((h) => h.decision || (h.verdict && h.verdict !== "ok" && h.verdict !== "skip"))?.n ?? null;
 
 export default function App() {
+  // Drag a divider to resize the setup panel or the control-plane rail; the widths persist.
+  const onAgnoHandleDown = useCallback((e) => {
+    e.preventDefault();
+    const grid = e.target.closest(".agno");
+    if (!grid) return;
+    const side = e.target.dataset.side;
+    const rect = grid.getBoundingClientRect();
+    const move = (ev) => {
+      ev.preventDefault();
+      if (side === "setup") {
+        const w = Math.min(Math.max(ev.clientX - rect.left, 200), rect.width * 0.4);
+        grid.style.setProperty("--setup-w", `${w}px`);
+      } else {
+        const w = Math.min(Math.max(rect.right - ev.clientX, 180), rect.width * 0.35);
+        grid.style.setProperty("--cp-w", `${w}px`);
+      }
+    };
+    const up = () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        const cs = getComputedStyle(grid);
+        localStorage.setItem("ma.cols", JSON.stringify({
+          setup: parseFloat(cs.getPropertyValue("--setup-w")) || undefined,
+          cp: parseFloat(cs.getPropertyValue("--cp-w")) || undefined,
+        }));
+      } catch { /* none */ }
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
+  }, []);
   // Resume (sessionStorage per workspace, ids and shown text only; see resume.js), read once before the first render, and ONLY when the page
   // loads with a valid ?returned=<known app>&uc=<id> (Back from a hand-off). A plain load or reload starts fresh, as before.
   const [back] = useState(() => takeReturn());
@@ -167,6 +200,17 @@ export default function App() {
   const page = FULL_PAGES.includes(view) ? view : null;
   const current = page ? "agent" : nav.some((n) => n.id === view) ? view : "agent"; // a hash for a page that is not open falls back to the agent
   const select = (id) => { setView_(id); try { window.history.replaceState(null, "", `#${id}`); } catch { /* ignore */ } };
+  // Saved divider widths re-apply when the agent page mounts.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("ma.cols") || "null");
+      if (!saved) return;
+      const el = document.querySelector(".agno");
+      if (!el) return;
+      if (saved.setup) el.style.setProperty("--setup-w", `${saved.setup}px`);
+      if (saved.cp) el.style.setProperty("--cp-w", `${saved.cp}px`);
+    } catch { /* none */ }
+  }, [current, page, presenter]);
 
   const allUc = catalog?.tracks.flatMap((t) => t.usecases) || [];
   // A restored turn holds a use case id only; it gets the use case back from this vertical's catalog (another vertical's turn stays text only).
@@ -410,6 +454,9 @@ export default function App() {
                   <UseCasePicker catalog={catalog} selectedId={selectedId} onPick={pick} failed={!catalog && !!error} keep={several ? isHandoff : null} />
                 </SetupSidebar>
               )}
+              {!presenter && sidebarOpen && (
+                <div className="col-handle" role="separator" aria-orientation="vertical" aria-label="Resize setup panel" data-side="setup" onPointerDown={onAgnoHandleDown} />
+              )}
               {!presenter && (
                 <button type="button" className="setup-toggle" onClick={toggleSidebar} data-testid="sidebar-toggle"
                   aria-expanded={sidebarOpen} aria-controls="setup"
@@ -437,6 +484,7 @@ export default function App() {
                   </EvidenceColumn>
                 )}
               </div>
+              {!presenter && <div className="col-handle" role="separator" aria-orientation="vertical" aria-label="Resize control-plane rail" data-side="cp" onPointerDown={onAgnoHandleDown} />}
               {!presenter && <ControlPlaneRail uc={uc} />}
             </div>
           )}
