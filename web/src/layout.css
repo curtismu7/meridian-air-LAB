@@ -146,7 +146,7 @@
 .turn { display: grid; gap: 10px; }
 .turn__you, .turn__agent { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: start; }
 .turn__said { margin: 3px 0 0; font-weight: 700; color: var(--text); }
-.turn__body { display: grid; gap: 8px; min-width: 0; }
+.turn__body { display: grid; gap: 8px; min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
 .turn__body p { margin: 0; }
 .turn__refused { color: var(--danger-text); }
 .turn__answer { display: grid; gap: 6px; justify-items: start; }
