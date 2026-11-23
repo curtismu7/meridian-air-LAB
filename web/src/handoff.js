@@ -32,6 +32,7 @@ export const PROXY_PATHS = Object.freeze({
   "meridian-a2a-hop": "/meridian-a2a-hop/",
   "mock-authorize": "/mock-authorize/",
   muse: "/muse/",
+  "observability-lab": "/observability-lab/",
   "no-tool-no-promise": "/no-tool-no-promise/",
   "obo-lab": "/obo-lab/",
   pingfederate: "/pingfederate-lab/",
