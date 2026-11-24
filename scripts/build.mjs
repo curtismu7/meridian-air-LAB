@@ -1,4 +1,4 @@
-// `npm run build`. Checks what a build must keep true (the manifest is valid: 87 use cases; the talk track and content pack are in sync with the data
+// `npm run build`. Checks what a build must keep true (the manifest is valid: 11 airline scenes; the talk track and content pack are in sync with the data
 // and the pack validates), then builds the web app with Vite into web/dist, which the server serves, and checks the build loads nothing from another origin.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -13,7 +13,10 @@ import { validatePack } from './validate-content-pack.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const problems = [];
 const m = loadManifest();
-if (m.usecases.length !== 87) problems.push('manifest is not 87 use cases');
+// The manifest loader itself enforces the lab's 11 airline scenes and their track counts; here we only re-check the
+// total, so a data edit that changes the count is caught even if the loader's own expectation is edited to match.
+if (m.usecases.length !== 11) problems.push('manifest is not 11 scenes');
+if (m.usecases.length !== m.meta.total) problems.push('manifest total does not match the scene count');
 if (fs.readFileSync(path.join(ROOT, 'docs/talk-track.md'), 'utf8') !== renderTalkTrackMarkdown(DEFAULT_CAST)) problems.push('docs/talk-track.md is out of date (npm run talk-track)');
 const committed = JSON.parse(fs.readFileSync(path.join(ROOT, 'content-pack.json'), 'utf8'));
 if (JSON.stringify(committed) !== JSON.stringify(buildPack())) problems.push('content-pack.json is out of date (npm run content-pack)');
@@ -25,4 +28,4 @@ if (web.status !== 0) { console.error('the web build failed'); process.exit(1); 
 const html = fs.readFileSync(path.join(ROOT, 'web/dist/index.html'), 'utf8');
 const foreign = [...html.matchAll(/(?:src|href)="(https?:)?\/\/[^"]+"/g)].map((x) => x[0]);
 if (foreign.length) { console.error(`web/dist/index.html loads from another origin: ${foreign.length} reference(s)`); process.exit(1); }
-console.log('build ok: manifest valid (87 use cases), talk track and content pack in sync, pack validates, web built into web/dist (same-origin assets only)');
+console.log('build ok: manifest valid (11 scenes), talk track and content pack in sync, pack validates, web built into web/dist (same-origin assets only)');
