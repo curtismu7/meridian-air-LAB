@@ -151,6 +151,12 @@
 .turn__refused { color: var(--danger-text); }
 .turn__answer { display: grid; gap: 6px; justify-items: start; }
 .turn__who { margin: 3px 0 0; }
+.turn__working { display: flex; align-items: center; gap: 5px; color: var(--muted); font-style: italic; }
+.turn__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: turn-dot 1.2s infinite ease-in-out; }
+.turn__dot:nth-child(2) { animation-delay: 0.2s; }
+.turn__dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes turn-dot { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .turn__dot { animation: none; } }
 .turn__ev { justify-self: start; min-height: 32px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 12px; text-decoration: underline; }
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
 .steps__n { display: inline-block; margin-right: 6px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
@@ -169,9 +175,9 @@
 .wtt__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .wtt__group { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); }
 .wtt__chip { min-height: 32px; padding: 3px 10px; border-radius: 999px; font-size: 12px; text-align: left; }
-.wtt select { min-height: 34px; width: 100%; padding: 4px 8px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: inherit; }
+.wtt select { min-height: 34px; width: 100%; padding: 4px 8px; font-size: 13px; background: #e4e6e8; border: 1px solid var(--border); border-radius: 8px; color: inherit; }
 .composer { display: flex; gap: 8px; }
-.composer input { flex: 1 1 auto; min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: inherit; }
+.composer input { flex: 1 1 auto; min-width: 0; background: #e4e6e8; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: inherit; }
 .composer input::placeholder { color: var(--muted); }
 
 /* hand-off card; go deeper (a box in the evidence column) */
