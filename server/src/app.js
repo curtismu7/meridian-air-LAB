@@ -34,6 +34,7 @@ import { a2aConfigured } from './a2a.js';
 import { shelfInfo } from './shelfLink.js';
 import { promptsFor, routeOf } from './routes.js';
 import { createBrain, REASONS } from './brain.js';
+import { captionsResponse } from './story-captions.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = process.env.WEB_DIST || path.resolve(HERE, '../../web/dist');
@@ -173,6 +174,13 @@ export function createApp({
     res.json(buildStory(loadCast(configFile, v), v));
   });
 
+  // Story mode's wording (video/captions.md, the file the recorded video and the live walk-through both read). The lab's own /api/story above serves the
+  // vertical cast story to the UI, so this route takes the other name. no-store: an edit to the wording shows on the next request without a restart.
+  api.get('/captions', (_req, res) => {
+    noStore(res);
+    const out = captionsResponse();
+    res.status(out.status).json(out.body);
+  });
   // A diagram by name (diagram-studio/1 data, cast filled). An unknown name falls back to the first one and is never echoed.
   api.get('/diagram', (req, res) => {
     staticCatalog(res);

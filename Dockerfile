@@ -18,6 +18,7 @@ RUN npm ci --omit=dev -w server && npm cache clean --force
 COPY server/src server/src
 COPY server/diagrams server/diagrams
 COPY data data
+COPY video/captions.md video/captions.md
 COPY --from=web /app/web/dist web/dist
 USER node
 EXPOSE 7832

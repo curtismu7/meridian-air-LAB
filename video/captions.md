@@ -8,6 +8,9 @@
 
 # Opening Slide
 
+## Header
+Meridian Air: agents on a trust plane
+
 ## Title
 Agents act on their own. Who watches them?
 
@@ -26,6 +29,86 @@ Give every agent the keys, or put a trust plane between the agent and everything
 
 ## Verdict
 This cut is a sample: the simulated rehearsal, every hop produced by the demo's mock engine.
+
+---
+
+# Step: sample_signin
+
+## Title
+A simulated traveler signs in
+
+## Text
+The sign-in here is the mock engine's: no real identity provider is called, but the run records the identity every hop acts as, exactly as a live run would.
+
+---
+
+# Step: sample_ma1
+
+## Title
+"Book me a seat to Denver on the next flight" (simulated)
+
+## Text
+One sentence from the customer. The simulated agent plans, the simulated gateway authorizes, the booking is made — every hop on screen. Nothing here touched a live tenant.
+
+---
+
+# Step: sample_ma2
+
+## Title
+The copilot picks a brain — with a simulated virtual key
+
+## Text
+The LLM key the agent uses is minted by the broker, scoped and expiring. The mock engine produces the shape of that exchange; no provider was called.
+
+---
+
+# Step: sample_ma7
+
+## Title
+"Ignore your instructions" — refused (simulated)
+
+## Text
+A prompt injection, typed as a customer. The simulated gateway refuses with a policy reason and a 403, not a leaked itinerary. The mock engine's decision, recorded like a real one.
+
+---
+
+# Step: sample_ma5
+
+## Title
+An agent's identity, read on demand (simulated)
+
+## Text
+The badge: name, scopes, custodian, expiry. The key value is shown nowhere, because the registry hands out proof, not copies. This read is the mock engine's registry.
+
+---
+
+# Step: sample_ma6
+
+## Title
+A $4,120 refund needs a human (simulated)
+
+## Text
+The agent cannot approve this. The approval goes to a person by CIBA, the agent waits, and the decision is on the record before the money moves — all simulated here.
+
+---
+
+# Step: sample_ma4
+
+## Title
+A partner agent, across the trust boundary (simulated)
+
+## Text
+The delegated chain is presented to the gateway — who is acting, on whose behalf — and the gateway decides what crosses. The mock engine plays both agents.
+
+---
+
+# Step: sample_ma9
+
+## Title
+"Prove your AI is safe" is a query now (simulated)
+
+## Text
+Every verdict the gateway made is already on the record, with compliance mappings attached at emit time. The mock engine's record; the real one reads the same.
 
 ---
 
@@ -65,7 +148,7 @@ Browser to identity provider to agent to gateway to tool. The mock engine produc
 The copilot picks a brain — with a virtual key
 
 ## Text
-The LLM key the agent uses is minted by the broker, scoped and expiring. The real provider key never touches the agent, so a stolen agent holds nothing worth stealing.
+The LLM key the agent uses is minted by the broker, scoped and expiring. The real provider key never touches the agent, so a stolen agent holds nothing worth stealing. {hops}
 
 ---
 
@@ -118,6 +201,13 @@ The delegated chain is presented to the gateway — who is acting, on whose beha
 Every verdict the gateway made is already on the record, with compliance mappings attached at emit time. Evidence is a byproduct of enforcement, not a project.
 
 ---
+
+
+
+
+
+
+
 
 # Closing Slide
 

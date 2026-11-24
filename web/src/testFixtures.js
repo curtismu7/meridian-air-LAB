@@ -43,6 +43,15 @@ export const STORY = {
   ],
 };
 const hop = (n, kind, over = {}) => ({ n, kind, label: `Hop ${n} ${kind}`, from: "browser", to: "idp", mock: true, verdict: "ok", traceparent: `00-${"a".repeat(32)}-${String(n).padStart(16, "0")}-01`, request: { method: "POST", url: "https://idp.mock.example/as" }, response: { status: 200, body: { ok: true } }, ...over });
+
+// The Story wording (GET /api/captions): the shape the shared parser returns, minimal but real.
+export const CAPTIONS = {
+  opening: { title: "Agents act on their own.", lead: "A trust plane.", verdict: "Simulated.", header: "Meridian Air: agents on a trust plane",
+    colA: { heading: "The obvious way", lines: ["keys everywhere"] }, colB: { heading: "A trust plane", lines: ["one door"] }, image: null, wide: false },
+  closing: { title: "One trust plane.", lead: "The same record.", verdict: "The end.",
+    colA: { heading: "What the run showed", lines: ["hops on screen"] }, colB: { heading: "Next", lines: ["real mode"] }, image: null, wide: false },
+  slides: {}, steps: {},
+};
 export const RAW = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJhbGV4Lm1vcmdhbiJ9.c2ln";
 export const runBody = (ucId = "UC1", over = {}) => ({
   ok: true, workspace: "w-test", seq: 1,
@@ -132,6 +141,7 @@ export function mockApi(state = {}) {
     calls.push({ method, url: String(url), path, query, headers: opts.headers || {}, body: opts.body ? JSON.parse(opts.body) : undefined });
     if (path === "/api/info") return json(200, { ...INFO, ...(s.info || {}) });
     if (path === "/api/story") return query.get("vertical") === "government" ? json(501, { error: "vertical_stub" }) : json(200, STORY);
+    if (path === "/api/captions") return json(200, CAPTIONS);
     if (path === "/api/usecases") return json(200, catalog(query.get("vertical") || "banking"));
     if (path === "/api/mode" && method === "GET") return json(200, { workspace: "w-test", mode: s.mode, modes: ["mock", "live"], live: s.live, liveReason: s.live === "allowed" ? null : s.liveReason });
     if (path === "/api/mode" && method === "POST") {
