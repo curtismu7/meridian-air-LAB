@@ -1,4 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
+import StoryToggle, { storyKey, readView } from "./story/StoryToggle.jsx";
+
+// Story mode is loaded only when the viewer switches it on, so the page in Demo mode does not pay for it.
+const StoryRoot = lazy(() => import("./StoryRoot.jsx"));
+export const STORY_PREFIX = "ma";
+
+// If the Story chunk cannot load (the lab was rebuilt, a stale file name, the network) the top bar must survive: Demo mode is never taken down by Story.
+class StoryBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div className="story-bar" role="alert" data-testid="story-error">
+        <span className="story-msg">Story could not load. Reload the page and try again.</span>
+        <button type="button" onClick={this.props.onExit}>Exit</button>
+      </div>
+    );
+  }
+}
+
 import UseCasePicker from "./components/UseCasePicker";
 import RunPanel from "./components/RunPanel";
 import DiagramView from "./components/DiagramView";
@@ -26,6 +47,7 @@ import TopMenu from "./top-menu/TopMenu.jsx";
 import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import "./top-menu/top-menu.css";
 import "./layout.css";
+import "./story/story.css";
 
 // The nav holds the agent's own areas only. An extra page joins the "More" menu beside it when a run of a use case that opens it succeeds, and
 // Reset removes it (one menu, so the shell bar stays one row however many extra pages are open).
@@ -94,6 +116,8 @@ export default function App() {
   const [resumed] = useState(() => (back ? loadResume(workspaceId()) : null));
   const [info, setInfo] = useState(null);
   const [story, setStory] = useState(null);
+  const [storyOn, setStoryOn] = useState(() => readView(STORY_PREFIX) === "story");
+  const [toggleKey, setToggleKey] = useState(0);
   const [mode, setMode] = useState(null);
   const [liveReason, setLiveReason] = useState(null);
   const [modeMsg, setModeMsg] = useState("");
@@ -256,12 +280,14 @@ export default function App() {
     const tid = turn ? ++turnSeq.current : null;
     if (turn) setTurns((ts) => [...ts, { id: tid, uc: u, vertical, status: "running", ...turn }]);
     setRunning(true);
+    try { window.dispatchEvent(new CustomEvent("ma:run-start")); } catch { /* no window events */ }
     // A typed or chip turn tells the server what was said and which brain actually picked the use case ("llama" only when llama.cpp did;
     // a fallback is "scripted"). A picked or previewed run sends neither.
     const typed = turn && turn.how !== "picked" ? { said: String(turn.said).slice(0, 400), brain: turn.how === "llm" ? "llama" : "scripted" } : {};
     const res = await postJson(`/api/run/${encodeURIComponent(u.id)}`, { vertical, persona: who, ...typed }, { traceparent: newTraceparent() }).catch(() => ({ ok: false, status: 0, body: { error: "network", detail: "The server did not answer. Is it running?" } }));
     if (mine !== runSeq.current) return; // a Reset or a newer run took over
     setRunning(false);
+    try { window.dispatchEvent(new CustomEvent("ma:run-end", { detail: { ok: res.status !== 0 } })); } catch { /* no window events */ }
     // Real runs as the person: no sign-in yet opens the Sign in dialog, and the run goes again once it succeeds.
     if (res.status === 401 && res.body?.error === "sign_in_required") { pendingRun.current = { u, turn: turn ? { said: turn.said, how: turn.how, source: turn.source } : null, who }; setSignOpen(true); }
     setResults((r) => ({ ...r, [key]: res }));
@@ -344,11 +370,21 @@ export default function App() {
     const ok = await resetWorkspace().catch(() => false);
     setResults({}); setOpened({}); setLast(null); setTurns([]); setSelHop(null); setRunCount((n) => n + 1); setModeMsg("");
     setResetSignal((n) => n + 1);
+    try { window.dispatchEvent(new CustomEvent("ma:reset")); } catch { /* no window events */ }
     if (viewFromHash().startsWith(EXTRA_PREFIX)) select("chat");
     await loadMode();
     if (realLevel === "full") loadSignin();
     setResetMsg(ok ? "Reset: your workspace's runs, results, the chat, extra pages and the diagram are back to the start." : "Reset failed on the server; the view was cleared anyway.");
   }, [loadMode, loadSignin, realLevel]);
+
+  // Story: the toggle hands the view over; Exit in the Story bar goes back to Demo, remembers it, and drops ?story=1 from the address so a reload stays in Demo.
+  const onStoryView = useCallback((on) => setStoryOn(on), []);
+  const leaveStory = useCallback(() => {
+    try { window.localStorage.setItem(storyKey(STORY_PREFIX), "demo"); } catch { /* not remembered */ }
+    try { const u = new URL(window.location.href); if (u.searchParams.has("story")) { u.searchParams.delete("story"); window.history.replaceState(null, "", u); } } catch { /* no address to tidy */ }
+    setStoryOn(false);
+    setToggleKey((k) => k + 1);
+  }, []);
 
   const signedIn = Boolean(signin?.signedIn);
   const afterSignIn = (body) => {
@@ -418,10 +454,11 @@ export default function App() {
             onReset={reset}
             showSignIn={mode === "live" && realLevel === "full"}
             signedIn={{ subject: signedIn ? (signin?.user?.name || "demo user") : null, onSignIn: () => setSignOpen(true), onSignOut: signOut }}
-            extra={<button type="button" aria-expanded={qcOpen} aria-controls={qcOpen && current === "agent" && !page ? "quick-config" : undefined} onClick={() => { setQcOpen((v) => !v); if (page || current !== "agent") select("agent"); }} data-testid="qc-open">Quick Config</button>}          >
+            extra={<><button type="button" aria-expanded={qcOpen} aria-controls={qcOpen && current === "agent" && !page ? "quick-config" : undefined} onClick={() => { setQcOpen((v) => !v); if (page || current !== "agent") select("agent"); }} data-testid="qc-open">Quick Config</button><StoryToggle key={toggleKey} prefix={STORY_PREFIX} onChange={onStoryView} /></>}          >
             <ShelfLink url={info?.shelfUrl} headers={() => ({ "x-workspace": workspaceId() })} />
             <VerifyMark id="meridian-air-lab" headers={() => ({ "x-workspace": workspaceId() })} />
           </TopMenu>
+          {storyOn ? <StoryBoundary onExit={leaveStory}><Suspense fallback={null}><StoryRoot mode={mode === "live" ? "real" : "mock"} ready={Boolean(mode)} onExit={leaveStory} prefix={STORY_PREFIX} /></Suspense></StoryBoundary> : null}
           {hostedOnly && <span className="seg__note" id="real-hosted-note" data-testid="real-hosted-note">{HOSTED_REAL_NOTE}</span>}
           {/* rule 19: the Real option in the shared TopMenu carries data-testid="mode-real" itself; no alias needed. */}
         </div>
