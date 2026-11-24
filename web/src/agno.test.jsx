@@ -54,6 +54,7 @@ let A;
 const boot = async (state) => {
   A = api(state); vi.stubGlobal("fetch", A);
   const view = render(<App />);
+  await userEvent.setup().click(screen.getByTestId("nav-agent"));
   await screen.findByTestId("uc-MA1");
   await screen.findByTestId("wtt-opt-MA1");
   await waitFor(() => expect(screen.getByTestId("agent-column").textContent).toMatch(/passenger-chat-agent/));

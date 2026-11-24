@@ -38,6 +38,7 @@ describe("What Privilege did under the Run result", () => {
     api = mockApi({ runAnswer: (id) => answer(runBody(id, { gatewayTrace: [{ step: 1, title: "Gateway check", status: 200, trace: mockTrace }] })) });
     vi.stubGlobal("fetch", api);
     render(<App />);
+    await userEvent.setup().click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     const u = userEvent.setup();
     expect(screen.queryByTestId("gateway-trace")).toBeNull();
@@ -56,6 +57,7 @@ describe("What Privilege did under the Run result", () => {
     api = mockApi({ runAnswer: (id) => answer(guidedBody(id)) });
     vi.stubGlobal("fetch", api);
     render(<App />);
+    await userEvent.setup().click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     const u = userEvent.setup();
     await u.click(screen.getByTestId("uc-MA1"));
@@ -67,6 +69,7 @@ describe("What Privilege did under the Run result", () => {
     api = mockApi({ live: "allowed", full: true, signedIn: true, info: { ...INFO, ...FULL_INFO }, realAnswer: (id) => { const b = realBody(id); b.run.gatewayTrace = [{ step: 1, title: "tools/list", status: 200, trace: realTrace }]; return b; } });
     vi.stubGlobal("fetch", api);
     render(<App />);
+    await userEvent.setup().click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     const u = userEvent.setup();
     await u.selectOptions(screen.getByTestId("mode-select"), "real");

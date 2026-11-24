@@ -12,6 +12,8 @@ const boot = async (state) => {
   api = mockApi(state);
   vi.stubGlobal("fetch", api);
   const view = render(<App />);
+  const u = userEvent.setup();
+  await u.click(screen.getByTestId("nav-agent"));
   await screen.findByTestId("uc-MA1");
   await waitFor(() => expect(screen.getByTestId("banner").textContent).toMatch(/^SIMULATED, MOCK mode/));
   return view;
@@ -36,6 +38,8 @@ describe("header, banner and side nav", () => {
     api = mockApi({ info: { hosted: true, hostedBanner } });
     vi.stubGlobal("fetch", api);
     render(<App />);
+    const u = userEvent.setup();
+    await u.click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     await waitFor(() => expect(screen.getByTestId("banner").textContent).toBe(hostedBanner));
     expect(screen.getByTestId("banner").getAttribute("data-state")).toBe("hosted");
@@ -56,7 +60,7 @@ describe("header, banner and side nav", () => {
     await boot();
     const tabs = within(screen.getByTestId("nav")).getAllByRole("tab").map((t) => t.textContent);
     expect(tabs).toEqual(BASE_NAV.map((n) => n.label));
-    expect(tabs).toEqual(["Agent", "Run history", "Diagram", "Talk track", "Privilege Console"]);
+    expect(tabs).toEqual(["Chat", "Agent detail", "Run history", "Diagram", "Talk track", "Privilege Console"]);
     const id = screen.getByTestId("workspace").textContent.replace("Workspace: ", "");
     expect(api.calls.length).toBeGreaterThan(2);
     for (const c of api.calls) expect(c.headers["x-workspace"]).toBe(id);
@@ -261,13 +265,13 @@ describe("extra pages (opens)", () => {
     await search(u, "everyone");
     await u.click(screen.getByTestId("uc-MA7"));
     await runIt(u);
-    expect(within(screen.getByTestId("nav")).getAllByRole("tab")).toHaveLength(5);
+    expect(within(screen.getByTestId("nav")).getAllByRole("tab")).toHaveLength(6);
     expect(screen.queryByTestId("nav-more")).toBeNull();
     await search(u, "");
     await u.click(screen.getByTestId("uc-MA4"));
     await runIt(u);
     // the tabs stay the agent's four areas; the extra page joins the one More menu beside them (the shell bar stays one row)
-    expect(within(screen.getByTestId("nav")).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Agent", "Run history", "Diagram", "Talk track", "Privilege Console"]);
+    expect(within(screen.getByTestId("nav")).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Chat", "Agent detail", "Run history", "Diagram", "Talk track", "Privilege Console"]);
     const more = screen.getByTestId("nav-more");
     expect([...more.options].map((o) => o.textContent)).toEqual(["More (1)", "Agent to agent"]);
     expect(screen.getByTestId("nav-page-a2a").value).toBe("page-a2a");
@@ -288,7 +292,7 @@ describe("extra pages (opens)", () => {
     await u.click(screen.getByTestId("reset"));
     await waitFor(() => expect(screen.queryByTestId("nav-page-a2a")).toBeNull());
     expect(screen.queryByTestId("extra-a2a")).toBeNull();
-    expect(screen.getByTestId("nav-agent").getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByTestId("nav-chat").getAttribute("aria-selected")).toBe("true");
     expect(api.calls.some((c) => c.method === "POST" && c.path === "/api/reset")).toBe(true);
   });
 
@@ -316,6 +320,8 @@ describe("mode toggle", () => {
     api = mockApi({ info: { hosted: true, hostedBanner: "HOSTED AND SIMULATED: test." } });
     vi.stubGlobal("fetch", api);
     render(<App />);
+    const u = userEvent.setup();
+    await u.click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     await waitFor(() => expect(screen.getByTestId("mode-select").querySelector('option[value="real"]').disabled).toBe(true));
   };
@@ -561,9 +567,10 @@ describe("fix pass 2026-11-01", () => {
     await boot();
     const main = screen.getByRole("main");
     const panel = within(main).getByRole("tabpanel");
-    expect(panel.getAttribute("aria-labelledby")).toBe("tab-agent");
+    expect(["tab-chat", "tab-agent"]).toContain(panel.getAttribute("aria-labelledby"));
     expect(main.getAttribute("role")).toBeNull();
     const u = userEvent.setup();
+    (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); // boot leaves focus on the nav; start the walk from the top of the page
     await u.tab();
     expect(document.activeElement).toBe(screen.getByTestId("skip"));
     await u.keyboard("{Enter}");
@@ -633,6 +640,9 @@ describe("fix pass 2026-11-01", () => {
     expect(screen.getByRole("alert").textContent).toMatch(/Could not load the lab \(Failed to fetch\)/);
     await waitFor(() => expect(screen.getByTestId("mode").textContent).toMatch(/Mode: unknown \(server did not answer\)/));
     expect(screen.getByTestId("mode").textContent).not.toMatch(/mock/);
+    const u = userEvent.setup();
+    await u.click(screen.getByTestId("nav-agent"));
+    await screen.findByTestId("catalog-failed");
     expect(screen.getByTestId("search-count").textContent).toBe("Use cases unavailable");
     expect(screen.getByTestId("catalog-failed")).toBeTruthy();
     expect(screen.queryByText(/Loading the use cases/)).toBeNull();
@@ -675,12 +685,15 @@ describe("fix pass 2026-11-01", () => {
     };
     vi.stubGlobal("fetch", fetchHeld);
     render(<App />);
+    const u = userEvent.setup();
+    await u.click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     fireEvent.change(screen.getByTestId("vertical"), { target: { value: "banking" } });
     await waitFor(() => expect(typeof land).toBe("function"));
     fireEvent.change(screen.getByTestId("vertical"), { target: { value: "airlines" } });
     land();
     await new Promise((r) => { setTimeout(r, 50); });
+    await u.click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
     expect(await screen.findByTestId("uc-MA6")).toBeTruthy();
   });

@@ -30,12 +30,14 @@ import "./layout.css";
 // The nav holds the agent's own areas only. An extra page joins the "More" menu beside it when a run of a use case that opens it succeeds, and
 // Reset removes it (one menu, so the shell bar stays one row however many extra pages are open).
 export const BASE_NAV = [
-  { id: "agent", label: "Agent" },
+  { id: "chat", label: "Chat" },
+  { id: "agent", label: "Agent detail" },
   { id: "runs", label: "Run history" },
   { id: "diagram", label: "Diagram" },
   { id: "talk", label: "Talk track" },
   { id: "console", label: "Privilege Console" },
 ];
+// The Chat tab: the conversation only, none of the detail chrome. The Agent detail tab is the original page, unchanged.
 const EXTRA_PREFIX = "page-";
 // Full-page evidence views of the agent area (#sequence, #reel): the nav keeps Agent selected.
 export const FULL_PAGES = ["sequence", "reel"];
@@ -47,7 +49,7 @@ const THEMES = [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]];
 
 const savedTheme = () => { try { const t = window.localStorage.getItem(THEME_KEY); return THEMES.some(([id]) => id === t) ? t : "auto"; } catch { return "auto"; } };
 const applyTheme = (t) => { const root = document.documentElement; if (t === "light" || t === "dark") root.setAttribute("data-theme", t); else root.removeAttribute("data-theme"); };
-const viewFromHash = () => window.location.hash.replace("#", "");
+const viewFromHash = () => window.location.hash.replace("#", "") || "chat";
 const resultKey = (id, vertical, persona, mode) => `${id}|${vertical}|${persona}|${mode}`;
 // The hop the evidence opens on after a run: the one that decided or stopped it, else none (the visitor clicks).
 const focusHop = (run) => (run?.hops || []).find((h) => h.decision || (h.verdict && h.verdict !== "ok" && h.verdict !== "skip"))?.n ?? null;
@@ -198,7 +200,7 @@ export default function App() {
   const extraNav = extras.map((k) => ({ id: `${EXTRA_PREFIX}${k}`, label: EXTRAS[k].label, extra: true }));
   const nav = [...BASE_NAV, ...extraNav];
   const page = FULL_PAGES.includes(view) ? view : null;
-  const current = page ? "agent" : nav.some((n) => n.id === view) ? view : "agent"; // a hash for a page that is not open falls back to the agent
+  const current = page ? "agent" : nav.some((n) => n.id === view) ? view : "chat"; // a hash for a page that is not open falls back to the chat
   const select = (id) => { setView_(id); try { window.history.replaceState(null, "", `#${id}`); } catch { /* ignore */ } };
   // Saved divider widths re-apply when the agent page mounts.
   useEffect(() => {
@@ -342,7 +344,7 @@ export default function App() {
     const ok = await resetWorkspace().catch(() => false);
     setResults({}); setOpened({}); setLast(null); setTurns([]); setSelHop(null); setRunCount((n) => n + 1); setModeMsg("");
     setResetSignal((n) => n + 1);
-    if (viewFromHash().startsWith(EXTRA_PREFIX)) select("agent");
+    if (viewFromHash().startsWith(EXTRA_PREFIX)) select("chat");
     await loadMode();
     if (realLevel === "full") loadSignin();
     setResetMsg(ok ? "Reset: your workspace's runs, results, the chat, extra pages and the diagram are back to the start." : "Reset failed on the server; the view was cleared anyway.");
@@ -416,8 +418,7 @@ export default function App() {
             onReset={reset}
             showSignIn={mode === "live" && realLevel === "full"}
             signedIn={{ subject: signedIn ? (signin?.user?.name || "demo user") : null, onSignIn: () => setSignOpen(true), onSignOut: signOut }}
-            extra={<button type="button" aria-expanded={qcOpen} aria-controls={qcOpen && current === "agent" && !page ? "quick-config" : undefined} onClick={() => { setQcOpen((v) => !v); if (page || current !== "agent") select("agent"); }} data-testid="qc-open">Quick Config</button>}
-          >
+            extra={<button type="button" aria-expanded={qcOpen} aria-controls={qcOpen && current === "agent" && !page ? "quick-config" : undefined} onClick={() => { setQcOpen((v) => !v); if (page || current !== "agent") select("agent"); }} data-testid="qc-open">Quick Config</button>}          >
             <ShelfLink url={info?.shelfUrl} headers={() => ({ "x-workspace": workspaceId() })} />
             <VerifyMark id="meridian-air-lab" headers={() => ({ "x-workspace": workspaceId() })} />
           </TopMenu>
@@ -439,6 +440,12 @@ export default function App() {
             <aside className="say" data-testid="presenter-say" aria-label="Talk track">
               {story.talkTrack.filter((t) => sayIds.includes(t.id)).map((t) => <p key={t.id}><strong>{t.title}.</strong> {t.say}</p>)}
             </aside>
+          )}
+          {current === "chat" && (
+            <div className="chatpage" data-testid="chat-page">
+              <AgentColumn agent={cast.castAgent} brand={cast.castBrand} userId={userId} vertical={vertical} verticalLabel={verticalLabel} stub={stub} prompts={prompts} turns={shownTurns}
+                status={busy ? "running" : statusOf(lastTurn)} onSay={say} onHop={(t, n) => { onHop(t, n); select("agent"); }} onPreview={(t) => { preview(t); select("agent"); }} running={busy} />
+            </div>
           )}
           {current === "agent" && page && (
             <FullPageEvidence page={page} onPage={select} onBack={() => select("agent")} catalog={catalog} selectedId={selectedId} failed={!catalog && !!error}

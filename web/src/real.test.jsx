@@ -14,6 +14,7 @@ const boot = async (state = {}) => {
   api = mockApi({ live: "allowed", full: true, password: PASSWORD, info: { ...INFO, ...FULL_INFO }, ...state });
   vi.stubGlobal("fetch", api);
   render(<App />);
+  await userEvent.setup().click(screen.getByTestId("nav-agent"));
   await screen.findByTestId("uc-MA1");
   const u = userEvent.setup();
   await u.selectOptions(screen.getByTestId("mode-select"), "real");

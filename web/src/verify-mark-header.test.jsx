@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import fs from "node:fs";
 import path from "node:path";
 import App from "./App";
@@ -19,6 +20,7 @@ const boot = async (shelfPayload) => {
     : base(url, opts));
   vi.stubGlobal("fetch", wrapped);
   render(<App />);
+  await userEvent.setup().click(screen.getByTestId("nav-agent"));
   await screen.findByTestId("uc-MA1");
   return within(await screen.findByTestId("top-menu"));
 };
