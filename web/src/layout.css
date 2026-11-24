@@ -237,5 +237,5 @@ details.evwhy > .kicker:not(summary .kicker) { margin-top: 12px; }
 .turn--note { display: block; font-size: 13px; padding: 4px 0 4px 10px; border-left: 3px solid var(--focus); overflow-wrap: anywhere; }
 
 /* the Chat tab: the conversation alone, centered; detail lives on the Agent detail tab */
-.chatpage { display: grid; justify-content: center; padding: 16px 0 24px; }
+.chatpage { display: grid; justify-items: center; padding: 16px 0 24px; }
 .chatpage .agentcol { width: min(720px, 100%); }
