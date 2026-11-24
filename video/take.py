@@ -205,7 +205,9 @@ def main():
             page.evaluate("() => window.__cm.clear()")
 
         def run_scene(uc, key, wait_s=25):
-            page.click(f'[data-testid="wtt-{uc}"]')
+            # The prompt picker is a <select> (wtt-select, options wtt-opt-<uc>) since the dropdown
+            # replaced the chip wall (2026-11-23): select by value, it fires onSay and resets itself.
+            page.select_option('[data-testid="wtt-select"]', uc)
             deadline = time.time() + (wait_s * 0.2 if REHEARSE else wait_s)
             while time.time() < deadline:
                 if "nothing run yet" not in page.inner_text('[data-testid="evidence-count"]'):
