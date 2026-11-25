@@ -49,11 +49,18 @@ function badge(entry) {
 // The local console presents a self-signed certificate (the desktop agent's own). TLS verification is
 // relaxed for THIS host only, and only when the owner has explicitly pointed MA_REGISTRY_URL at it —
 // never globally. (The alternative is shipping the agent's CA, which the owner does not publish.)
+// The console resets the TLS handshake unless the client names it: a connection by IP or by
+// host.docker.internal (no SNI it knows) is dropped. So the lab connects to the reachable host and
+// presents the console's own name (local.procyon.ai) as SNI and Host.
+const CONSOLE_NAME = new URL(REGISTRY_DEFAULT_URL).hostname;
+const LOOPBACK_ALIASES = new Set(['127.0.0.1', 'localhost', 'host.docker.internal']);
 function localGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
+    const named = LOOPBACK_ALIASES.has(u.hostname) ? { servername: CONSOLE_NAME, host: `${CONSOLE_NAME}:${u.port || 443}` } : {};
     const req = https.request({ hostname: u.hostname, port: u.port || 443, path: u.pathname + u.search, method: 'GET',
-      headers: { accept: 'application/json', ...headers }, rejectUnauthorized: false, timeout: 15_000 }, (res) => {
+      ...(named.servername ? { servername: named.servername } : {}),
+      headers: { accept: 'application/json', ...(named.host ? { host: named.host } : {}), ...headers }, rejectUnauthorized: false, timeout: 15_000 }, (res) => {
       let text = '';
       res.on('data', (c) => { text += c; });
       res.on('end', () => resolve({ status: res.statusCode, json: (() => { try { return JSON.parse(text); } catch { return {}; } })() }));
@@ -79,7 +86,7 @@ export async function listKeys({ base, tenant } = {}) {
   for (const b of alternates(base)) {
     const session = crypto.randomUUID();
     let r;
-    try { r = await localGet(`${b}/api/${tenant}/v1/agentaccesskeys/default`, { 'x-procyon-session-id': session }); }
+    try { r = await localGet(`${b}/api/${tenant}/v1/agentaccesskeys?ObjectMeta.Namespace=default`, { 'x-procyon-session-id': session }); }
     catch (e) { last = e; continue; }
     const j = r.json;
     if (r.status === 200) return (j.AgentAccessKeys ?? []).map(badge);
