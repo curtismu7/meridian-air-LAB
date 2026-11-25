@@ -63,9 +63,23 @@ def clip_window(first, last, delay=0.05, tail=0.8):
     start = first + delay   # the slide is painted within a frame of being drawn: the video never shows the page underneath
     return {"start": round(start, 2), "end": round(last + tail, 2) if last is not None else None}
 
+def check_privilege_console():
+    """MA5 reads the owner's Privilege Agent Registry from the desktop app's local console (127.0.0.1:8643, name local.procyon.ai). The console only listens while the
+    PingOne Privilege app is open and signed in; with it down, MA5 fails Real and the take would show a broken scene. Any HTTP answer counts as up (it answers 302 to /).
+    SKIP_CONSOLE_CHECK=1 skips it."""
+    import http.client, ssl
+    host, port = os.environ.get("CONSOLE_HOST", "local.procyon.ai"), int(os.environ.get("CONSOLE_PORT", "8643"))
+    try:
+        conn = http.client.HTTPSConnection(host, port, timeout=5, context=ssl._create_unverified_context())   # the console's own self-signed certificate
+        conn.request("GET", "/"); conn.getresponse().read(); conn.close()
+    except (OSError, http.client.HTTPException) as e:
+        raise SystemExit(f"take.py: MA5 needs the PingOne Privilege desktop app open and signed in: its console at {host}:{port} is not answering ({type(e).__name__}). "
+                         "Open the app, wait for it to sign in, then run again (SKIP_CONSOLE_CHECK=1 records anyway, and MA5 will fail Real).")
+
 def main():
     global OPENING_SLIDE, CLOSING_SLIDE, STEPS, SLIDES, TOTAL
     WORK.mkdir(parents=True, exist_ok=True)
+    if HEADLESS_REAL and "MA5" in SCENES and os.environ.get("SKIP_CONSOLE_CHECK") != "1": check_privilege_console()
     result = {"ok": False}
     try:   # the wording, from the lab's /api/captions (the one shared parser), checked to be this checkout's captions.md
         OPENING_SLIDE, CLOSING_SLIDE, STEPS, SLIDES = captions.load(APP, Path(__file__).parent / "captions.md")
