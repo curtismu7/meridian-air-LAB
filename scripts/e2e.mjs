@@ -100,6 +100,9 @@ check((await healthOf(liveBase)) === 'live' && (await healthOf(base)) === 'offli
 let browser;
 try {
   browser = await chromium.launch({ executablePath: process.env.E2E_CHROMIUM || undefined });
+  // The setup sidebar (the shared Rail) opens collapsed; these blocks drive its picker, so every context pins it open (`ma.setup` = "0").
+  const rawNewContext = browser.newContext.bind(browser);
+  browser.newContext = async (o) => { const c = await rawNewContext(o); await c.addInitScript(() => { try { window.localStorage.setItem('ma.setup', '0'); } catch { /* storage blocked */ } }); return c; };
   for (const [width, height, name] of [[1280, 900, 'desktop'], [375, 800, 'phone']]) {
     for (const scheme of ['light', 'dark']) {
       const tag = `${name}-${scheme}`;
