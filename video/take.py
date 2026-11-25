@@ -215,9 +215,9 @@ def main():
                     rows.sort((a, b) => score(a) - score(b));
                     document.querySelectorAll('[data-cm-pick]').forEach((e) => e.removeAttribute('data-cm-pick'));
                     const r = rows[0];
-                    if (!r) return null;
+                    if (!r || score(r) >= 80) return null;   // tokens, trace ids and the bare HTTP status say little: no second caption for this step
                     r.setAttribute('data-cm-pick', '1');
-                    return { key: t(r.querySelector('.jform__k')), val: t(r.querySelector('.jform__v')) };
+                    return { key: t(r.querySelector('.jform__k')).replace(/^calls\\[\\d+\\]\\./, ''), val: t(r.querySelector('.jform__v')) };
                 }""")
                 if info["decision"]:
                     page.evaluate("() => document.querySelector('[data-testid=\"decision\"]').scrollIntoView({ block: 'center' })")
