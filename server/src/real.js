@@ -318,7 +318,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       };
 
       // 1. Sign-in (done in the dialog before this run): what happened, and the user's token.
-      push({ kind: 'sign-in', label: 'Sign-in [REAL]: pi.flow with the password you typed in the Sign in dialog (no redirect)', from: 'browser', to: 'idp', verdict: 'ok', traceparent: session.steps[0]?.traceparent ?? tp(), note: 'Done once in the Sign in dialog: authorize with response_mode=pi.flow and PKCE S256, the flows API username/password step, then the code for tokens. The password was sent once and is shown nowhere.', request: { steps: session.steps.map((s) => ({ step: s.step, ...s.request })) }, response: { steps: session.steps.map((s) => ({ step: s.step, ...s.response })), user: userOf(session) } });
+      push({ kind: 'sign-in', label: 'Sign-in: pi.flow with the password you typed in the Sign in dialog (no redirect)', from: 'browser', to: 'idp', verdict: 'ok', traceparent: session.steps[0]?.traceparent ?? tp(), note: 'Done once in the Sign in dialog: authorize with response_mode=pi.flow and PKCE S256, the flows API username/password step, then the code for tokens. The password was sent once and is shown nowhere.', request: { steps: session.steps.map((s) => ({ step: s.step, ...s.request })) }, response: { steps: session.steps.map((s) => ({ step: s.step, ...s.response })), user: userOf(session) } });
       addToken('user access token (REAL, from the pi.flow sign-in)', session.accessToken, 'REAL token from your PingOne environment, shown raw for teaching (rule 4). It expires in minutes; secrets and your password are never shown.');
 
       // MA9's Real path: the landscape query runs against the live SIEM (MA_SIEM_*) — the same stream
@@ -328,11 +328,11 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       if (uc.id === 'MA9') {
         const sc = siemConfig(liveSettingsFor());
         if (!sc.ok) {
-          push({ kind: 'personal-agent-lookup', label: 'Landscape query [REAL]: not configured', from: 'agent', to: 'siem', verdict: 'deny', traceparent: tp(), note: sc.problem });
+          push({ kind: 'personal-agent-lookup', label: 'Landscape query: not configured', from: 'agent', to: 'siem', verdict: 'deny', traceparent: tp(), note: sc.problem });
           finishNotRun(4, `Not run: ${sc.problem}`);
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_NOT_CONFIGURED', reply: { who: 'Agent', text: `The landscape query is not configured: ${sc.problem}` }, gatewayTrace: [] });
         }
-        push({ kind: 'personal-agent-lookup', label: "Landscape query [REAL]: the gateway's verdict stream, last 15 minutes", from: 'agent', to: 'siem', verdict: 'held', traceparent: tp(),
+        push({ kind: 'personal-agent-lookup', label: "Landscape query: the gateway's verdict stream, last 15 minutes", from: 'agent', to: 'siem', verdict: 'held', traceparent: tp(),
           request: { url: `${sc.base}/${encodeURIComponent(SIEM_INDEX)}/_search`, method: 'POST', body: { query: { range: { '@timestamp': { gte: 'now-15m' } } } } } });
         const counts = { permit: 0, deny: 0, other: 0 };
         let siemErr = null; let hits = [];
@@ -350,11 +350,11 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
           }
         } catch (e) { siemErr = e.message; }
         if (siemErr) {
-          push({ kind: 'personal-agent-lookup', label: 'Landscape query [REAL]: the SIEM read failed', from: 'agent', to: 'siem', verdict: 'deny', traceparent: tp(), note: siemErr });
+          push({ kind: 'personal-agent-lookup', label: 'Landscape query: the SIEM read failed', from: 'agent', to: 'siem', verdict: 'deny', traceparent: tp(), note: siemErr });
           finishNotRun(4, `Not run: ${siemErr}`);
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_SIEM_FAILED', reply: { who: 'Agent', text: `The landscape query failed: ${siemErr}` }, gatewayTrace: [] });
         }
-        push({ kind: 'personal-agent-lookup', label: "Landscape query [REAL]: verdicts counted from the live stream", from: 'agent', to: 'siem', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'personal-agent-lookup', label: "Landscape query: verdicts counted from the live stream", from: 'agent', to: 'siem', verdict: 'ok', traceparent: tp(),
           response: { window: '15m', counts, sample: hits.slice(0, 5).map((h) => String(h.source?.Message ?? '').slice(0, 120)) } });
         // The compliance mappings and the dashboard are the guided page: shown as a link, labelled as the lab's guide.
         push({ kind: 'gateway-permit', label: 'Govern page [LAB]: MITRE ATLAS / OWASP LLM / NIST mappings and the dashboard', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
@@ -371,15 +371,15 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       if (uc.id === 'MA4') {
         const acfg = a2aConfig(liveSettingsFor());
         if (!acfg.ok) {
-          push({ kind: 'a2a-protocol-message', label: 'A2A [REAL]: not configured', from: 'agent', to: 'a2a', verdict: 'deny', traceparent: tp(), note: acfg.problem });
+          push({ kind: 'a2a-protocol-message', label: 'A2A: not configured', from: 'agent', to: 'a2a', verdict: 'deny', traceparent: tp(), note: acfg.problem });
           finishNotRun(4, `Not run: ${acfg.problem}`);
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_NOT_CONFIGURED', reply: { who: 'Agent', text: `The A2A hop is not configured: ${acfg.problem}` }, gatewayTrace: [] });
         }
-        push({ kind: 'a2a-agent-card', label: "A2A [REAL]: the partner agent's card, discovered through the gateway", from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'a2a-agent-card', label: "A2A: the partner agent's card, discovered through the gateway", from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
           request: { url: `${acfg.url}/.well-known/agent-card.json` } });
-        push({ kind: 'a2a-protocol-bearer', label: 'A2A [REAL]: the delegated chain is presented to the Privilege gateway', from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'a2a-protocol-bearer', label: 'A2A: the delegated chain is presented to the Privilege gateway', from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
           note: 'the gateway checks the key, the grant and the user-level policy before anything is proxied to AWS' });
-        push({ kind: 'a2a-protocol-message', label: 'A2A [REAL]: message/send to the partner agent over the gateway', from: 'agent', to: 'a2a', verdict: 'held', traceparent: tp(),
+        push({ kind: 'a2a-protocol-message', label: 'A2A: message/send to the partner agent over the gateway', from: 'agent', to: 'a2a', verdict: 'held', traceparent: tp(),
           request: { url: acfg.url, method: 'POST', body: { message: "our partner's agent needs to rebook a stranded passenger" } } });
         let replyText = null; let a2aErr = null;
         try {
@@ -408,16 +408,16 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
           if (replyText) replyText = replyText.replace(/<thinking>[\s\S]*?<\/thinking>\s*/g, '').trim();
         } catch (e) { a2aErr = e.message; }
         if (a2aErr) {
-          push({ kind: 'a2a-protocol-message', label: 'A2A [REAL]: the partner call failed', from: 'agent', to: 'a2a', verdict: 'deny', traceparent: tp(), note: a2aErr });
+          push({ kind: 'a2a-protocol-message', label: 'A2A: the partner call failed', from: 'agent', to: 'a2a', verdict: 'deny', traceparent: tp(), note: a2aErr });
           finishNotRun(4, `Not run: ${a2aErr}`);
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_A2A_FAILED', reply: { who: 'Agent', text: `The partner agent call failed: ${a2aErr}` }, gatewayTrace: [] });
         }
-        push({ kind: 'a2a-protocol-message', label: "A2A [REAL]: the partner agent answered through the gateway", from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'a2a-protocol-message', label: "A2A: the partner agent answered through the gateway", from: 'agent', to: 'a2a', verdict: 'ok', traceparent: tp(),
           response: { reply: replyText } });
         // The story's second act (the mismatch probe) is the lab's own teaching hop, labelled as such.
         push({ kind: 'a2a-mismatch-probe', label: "Mismatch probe [LAB]: the same key asking for a different app — refused", from: "agent", to: "a2a", verdict: "deny", traceparent: tp(),
           note: "this probe is the lab's own instruction (the catalog's PERMIT_THEN_DENY); the real leg above is the permit" });
-        push({ kind: 'agent-reply', label: "Agent reply [REAL]: the partner agent's answer, relayed", from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'agent-reply', label: "Agent reply: the partner agent's answer, relayed", from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
           response: { reply: replyText } });
         const env4 = runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome: 'REAL_PERMIT', reply: { who: 'Agent', text: replyText ?? 'The partner agent answered (see the hops).' }, gatewayTrace: [] });
         return env4;
@@ -428,25 +428,25 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       if (uc.id === 'MA5') {
         const rcfg = registryConfig(liveSettingsFor());
         if (!rcfg.ok) {
-          push({ kind: 'gateway-permit', label: 'Agent Registry [REAL]: not configured', from: 'bff', to: 'registry', verdict: 'deny', traceparent: tp(), note: rcfg.problem });
+          push({ kind: 'gateway-permit', label: 'Agent Registry: not configured', from: 'bff', to: 'registry', verdict: 'deny', traceparent: tp(), note: rcfg.problem });
           finishNotRun(4, `Not run: ${rcfg.problem}`);
           outcome = 'REAL_NOT_CONFIGURED'; reply = { who: 'Agent', text: `The Agent Registry read is not configured: ${rcfg.problem}` };
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace: [] });
         }
-        push({ kind: 'personal-agent-lookup', label: "Agent Registry [REAL]: reading the owner's registry over the local console API", from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'personal-agent-lookup', label: "Agent Registry: reading the owner's registry over the local console API", from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
           request: { url: `${rcfg.base}/api/${rcfg.tenant}/v1/agentaccesskeys?ObjectMeta.Namespace=default`, note: 'x-procyon-session-id is a correlation id, not a credential; the listener trusts loopback callers' } });
         let keys = null; let regErr = null;
         try { keys = await listRegistryKeys(rcfg); } catch (e) { regErr = e; }
         if (regErr) {
-          push({ kind: 'gateway-permit', label: 'Agent Registry [REAL]: the read was refused', from: 'bff', to: 'registry', verdict: 'deny', traceparent: tp(), note: regErr.message });
+          push({ kind: 'gateway-permit', label: 'Agent Registry: the read was refused', from: 'bff', to: 'registry', verdict: 'deny', traceparent: tp(), note: regErr.message });
           finishNotRun(4, `Not run: the registry read failed (${regErr.message})`);
           outcome = 'REAL_REGISTRY_REFUSED'; reply = { who: 'Agent', text: `The Agent Registry refused the read: ${regErr.message}` };
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace: [] });
         }
         const shown = keys.filter((k) => !k.revoked).slice(0, 8);
-        push({ kind: 'gateway-permit', label: `Agent Registry [REAL]: ${keys.length} agent keys, ${shown.length} shown (revoked hidden)`, from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'gateway-permit', label: `Agent Registry: ${keys.length} agent keys, ${shown.length} shown (revoked hidden)`, from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
           response: { badges: shown } });
-        push({ kind: 'agent-reply', label: 'Agent reply [REAL]: the badges, from the live registry', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'agent-reply', label: 'Agent reply: the badges, from the live registry', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(),
           response: { badges: shown, count: keys.length } });
         const names = shown.map((k) => k.name).filter(Boolean).slice(0, 4).join(', ');
         outcome = 'REAL_PERMIT';
@@ -460,7 +460,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       const t2 = tp();
       const ag = await tokenCall({ grant_type: 'client_credentials', scope: config.agentScope }, config.agent, t2);
       const agent = typeof ag.json?.access_token === 'string' ? ag.json.access_token : null;
-      push({ kind: 'actor-token', label: `Agent token [REAL]: the agent app's own client-credentials token (scope ${config.agentScope})`, from: 'agent', to: 'idp', verdict: agent ? 'ok' : 'deny', traceparent: t2, note: agent ? 'The agent app (MA_AGENT_CLIENT_ID) authenticated with its own secret (write-only). This is the actor token for exchange 1.' : failText(ag), request: { method: 'POST', url: `${config.base}/as/token`, headers: { authorization: SECRET_SHOWN }, body: { grant_type: 'client_credentials', scope: config.agentScope } }, response: { status: ag.status, body: agent ? { access_token: '[the agent token: in the token list]', token_type: str(ag.json.token_type), expires_in: Number.isFinite(ag.json.expires_in) ? ag.json.expires_in : null, scope: str(ag.json.scope) } : p1Error(ag) } });
+      push({ kind: 'actor-token', label: `Agent token: the agent app's own client-credentials token (scope ${config.agentScope})`, from: 'agent', to: 'idp', verdict: agent ? 'ok' : 'deny', traceparent: t2, note: agent ? 'The agent app (MA_AGENT_CLIENT_ID) authenticated with its own secret (write-only). This is the actor token for exchange 1.' : failText(ag), request: { method: 'POST', url: `${config.base}/as/token`, headers: { authorization: SECRET_SHOWN }, body: { grant_type: 'client_credentials', scope: config.agentScope } }, response: { status: ag.status, body: agent ? { access_token: '[the agent token: in the token list]', token_type: str(ag.json.token_type), expires_in: Number.isFinite(ag.json.expires_in) ? ag.json.expires_in : null, scope: str(ag.json.scope) } : p1Error(ag) } });
       if (!agent) {
         outcome = ag.unreachable ? 'REAL_UNREACHABLE' : 'REAL_REFUSED';
         const noGrant = !ag.unreachable && p1Error(ag).error === 'invalid_scope';
@@ -477,7 +477,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
         const dec1 = first ? decodeJwt(first) : null;
         const act1 = actOf(dec1?.claims);
         const answerOf = (ex, tok, act) => ({ status: ex.status, body: tok ? { access_token: `[the ${tok} token: in the token list]`, issued_token_type: str(ex.json.issued_token_type), token_type: str(ex.json.token_type), expires_in: Number.isFinite(ex.json.expires_in) ? ex.json.expires_in : null, scope: str(ex.json.scope), act_claim: actShown(act) } : p1Error(ex) });
-        push({ kind: 'token-exchange', shortTitle: EX1_TITLE, label: 'Token exchange 1 [REAL]: act = agent (RFC 8693 at PingOne, your token as subject, the agent token as actor)', from: 'bff', to: 'idp', verdict: first && act1 ? 'ok' : 'deny', traceparent: t3, note: first ? (act1 ? 'PingOne stamped act = the agent into the token (the resource that owns the agent scope reads the actor token\'s client_id).' : (dec1 ? 'PingOne answered, but the token has NO act claim: check the act attribute of the resource that owns the agent scope.' : 'PingOne answered with a token that is not a JWT (opaque), so the lab cannot read an act claim from it and treats it as having none.')) : failText(ex1), request: { method: 'POST', url: `${config.base}/as/token`, headers: { authorization: SECRET_SHOWN }, body: { grant_type: TX, subject_token: '[the user access token]', subject_token_type: AT, actor_token: '[the agent token]', actor_token_type: AT, scope: config.agentScope } }, response: answerOf(ex1, first ? 'exchange-1' : null, act1) });
+        push({ kind: 'token-exchange', shortTitle: EX1_TITLE, label: 'Token exchange 1: act = agent (RFC 8693 at PingOne, your token as subject, the agent token as actor)', from: 'bff', to: 'idp', verdict: first && act1 ? 'ok' : 'deny', traceparent: t3, note: first ? (act1 ? 'PingOne stamped act = the agent into the token (the resource that owns the agent scope reads the actor token\'s client_id).' : (dec1 ? 'PingOne answered, but the token has NO act claim: check the act attribute of the resource that owns the agent scope.' : 'PingOne answered with a token that is not a JWT (opaque), so the lab cannot read an act claim from it and treats it as having none.')) : failText(ex1), request: { method: 'POST', url: `${config.base}/as/token`, headers: { authorization: SECRET_SHOWN }, body: { grant_type: TX, subject_token: '[the user access token]', subject_token_type: AT, actor_token: '[the agent token]', actor_token_type: AT, scope: config.agentScope } }, response: answerOf(ex1, first ? 'exchange-1' : null, act1) });
         if (!first) {
           outcome = ex1.unreachable ? 'REAL_UNREACHABLE' : 'REAL_REFUSED';
           reply = { who: 'PingOne', text: ex1.unreachable ? 'PingOne did not answer token exchange 1. Check the network, or switch to Mock.' : `PingOne refused token exchange 1 (HTTP ${ex1.status}${p1Error(ex1).error ? `: ${p1Error(ex1).error}` : ''}). Check that the agent app has the token-exchange grant and the ${config.agentScope} scope.` };
@@ -501,7 +501,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
           const opaque2 = Boolean(delegated) && dClaims === null;
           const auds = [].concat(dClaims?.aud ?? []).filter((a) => typeof a === 'string');
           const audNote = delegated && dClaims && !auds.includes(config.audience) ? ` The token's aud (${cleanFree(auds.join(' ') || 'none', 300)}) is not MA_GATEWAY_AUDIENCE: the gateway may refuse it. Check which resource owns the gateway scope.` : '';
-          push({ kind: 'token-exchange', shortTitle: EX2_TITLE, label: 'Token exchange 2 [REAL]: for the gateway (RFC 8693 at PingOne, the exchange-1 token as subject, no actor, the gateway scope)', from: 'bff', to: 'idp', verdict: delegated && act2 ? 'ok' : 'deny', traceparent: t4, note: delegated ? `${act2 ? 'act carried over from exchange 1; the audience comes from the resource that owns the gateway scope (no audience parameter is sent).' : (opaque2 ? 'The token is not a JWT (opaque), so the lab cannot read an act claim from it and treats it as having none.' : 'The token has NO act claim: exchange 2 should pass the exchange-1 token\'s act through.')}${audNote}` : failText(ex2), request: { method: 'POST', url: `${config.base}/as/token`, headers: { authorization: SECRET_SHOWN }, body: { grant_type: TX, subject_token: '[the exchange-1 token]', subject_token_type: AT, scope: config.scope } }, response: answerOf(ex2, delegated ? 'delegated' : null, act2) });
+          push({ kind: 'token-exchange', shortTitle: EX2_TITLE, label: 'Token exchange 2: for the gateway (RFC 8693 at PingOne, the exchange-1 token as subject, no actor, the gateway scope)', from: 'bff', to: 'idp', verdict: delegated && act2 ? 'ok' : 'deny', traceparent: t4, note: delegated ? `${act2 ? 'act carried over from exchange 1; the audience comes from the resource that owns the gateway scope (no audience parameter is sent).' : (opaque2 ? 'The token is not a JWT (opaque), so the lab cannot read an act claim from it and treats it as having none.' : 'The token has NO act claim: exchange 2 should pass the exchange-1 token\'s act through.')}${audNote}` : failText(ex2), request: { method: 'POST', url: `${config.base}/as/token`, headers: { authorization: SECRET_SHOWN }, body: { grant_type: TX, subject_token: '[the exchange-1 token]', subject_token_type: AT, scope: config.scope } }, response: answerOf(ex2, delegated ? 'delegated' : null, act2) });
           if (!delegated) {
             outcome = ex2.unreachable ? 'REAL_UNREACHABLE' : 'REAL_REFUSED';
             reply = { who: 'PingOne', text: ex2.unreachable ? 'PingOne did not answer token exchange 2. Check the network, or switch to Mock.' : `PingOne refused token exchange 2 (HTTP ${ex2.status}${p1Error(ex2).error ? `: ${p1Error(ex2).error}` : ''}). Check that the agent app is granted the gateway scope and that the scope's resource exists.` };
@@ -517,7 +517,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
             // token it presents carries no secret; the brokered operator credential, if policy calls for one, is
             // injected at the gateway edge (JIT, TTL-bounded) and is never visible to this process or the agent.
             if (uc.id === 'MA10') {
-              push({ kind: 'credential-swap', label: 'Credential broker [REAL]: the agent presents a delegated token — no secret — and the gateway injects at the edge', from: 'privilege', to: 'mcp', verdict: 'ok', traceparent: tp(),
+              push({ kind: 'credential-swap', label: 'Credential broker: the agent presents a delegated token — no secret — and the gateway injects at the edge', from: 'privilege', to: 'mcp', verdict: 'ok', traceparent: tp(),
                 note: 'The agent holds no credential: its token delegates, it does not disclose. The operator credential the tool call needs is brokered by the gateway (JIT, TTL-bounded, never shown to the agent) — the stolen-credential incident class disappears by construction.',
                 request: { headers: { authorization: 'Bearer [the delegated token: no secret in it]' } }, response: { injected: 'at the gateway edge, not visible to the agent or this lab' } });
             }
@@ -551,7 +551,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
     const listed = Array.isArray(list?.rpc?.result?.tools) ? list.rpc.result.tools.filter((t) => t && typeof t.name === 'string').map((t) => t.name.slice(0, 80)).slice(0, 300) : [];
     const firstBad = init.kind !== 'ok' ? init : list && list.kind !== 'ok' ? list : null;
     push({
-      kind: 'gateway-check', label: 'Agent Gateway [REAL]: initialize and tools/list over MCP with the delegated token', from: 'agent', to: 'gateway', verdict: firstBad ? (firstBad.kind === 'hold' ? 'held' : 'deny') : 'ok', traceparent: init.traceparent,
+      kind: 'gateway-check', label: 'Agent Gateway: initialize and tools/list over MCP with the delegated token', from: 'agent', to: 'gateway', verdict: firstBad ? (firstBad.kind === 'hold' ? 'held' : 'deny') : 'ok', traceparent: init.traceparent,
       note: firstBad ? mapped(firstBad).note : `The gateway accepted the delegated token (X-Token-Validation: jwks) and listed ${listed.length} tools${listed.includes(tool) ? `, including ${tool}` : `; ${tool} is NOT among them`}. No trusted-caller header was sent.`,
       request: { calls: [shownReq(init, { method: 'initialize' }), ...(list ? [shownReq(list, { method: 'notifications/initialized, then tools/list' })] : [])] },
       response: { calls: [shownRes(init, init.rpc?.result ? { serverInfo: init.rpc.result.serverInfo ?? null, protocolVersion: str(init.rpc.result.protocolVersion) } : init.rpc?.error ?? null), ...(list ? [shownRes(list, { tools: listed.length, names: listed.slice(0, 40) })] : [])] },
@@ -574,7 +574,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
     const needTwo = tool === 'create_transfer';
     if (!pre && NEEDS_ACCOUNTS.has(tool) && accounts.length < (needTwo ? 2 : 1)) {
       notRun('authorize-decision', 'Authorize decision', 'gateway', 'authorize', `Not run: ${tool} was not called.`);
-      push({ kind: 'tool-refused', label: `MCP tool [REAL]: get_my_accounts (${tool} was not called)`, from: 'gateway', to: 'mcp', verdict: 'deny', traceparent: calls[0].traceparent, note: `The account list had ${accounts.length} usable account${accounts.length === 1 ? '' : 's'}; ${tool} needs ${needTwo ? 'two' : 'one'}, so the lab did not call it.`, request: { calls: calls.map((c) => shownReq(c, { method: 'tools/call', name: 'get_my_accounts', arguments: {} })) }, response: { calls: calls.map((c) => shownRes(c, { content: contentShown(c.rpc?.result) })) } });
+      push({ kind: 'tool-refused', label: `MCP tool: get_my_accounts (${tool} was not called)`, from: 'gateway', to: 'mcp', verdict: 'deny', traceparent: calls[0].traceparent, note: `The account list had ${accounts.length} usable account${accounts.length === 1 ? '' : 's'}; ${tool} needs ${needTwo ? 'two' : 'one'}, so the lab did not call it.`, request: { calls: calls.map((c) => shownReq(c, { method: 'tools/call', name: 'get_my_accounts', arguments: {} })) }, response: { calls: calls.map((c) => shownRes(c, { content: contentShown(c.rpc?.result) })) } });
       rest(2, 'Not run: the tool was not called.');
       return { outcome: 'REAL_TOOL_ERROR', reply: { who: 'Agent', text: `I could not find ${needTwo ? 'two accounts' : 'an account'} of yours for ${tool}, so I did not call it.` } };
     }
@@ -589,7 +589,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
     const audit = parseAuditTrail(last.headers['x-gw-audit-trail']);
     const decisionOutcome = last.kind === 'deny' ? 'DENY' : last.kind === 'hold' ? 'HOLD' : last.kind === 'ok' ? 'PERMIT' : last.kind === 'token' ? 'TOKEN REFUSED' : 'NO ANSWER';
     push({
-      kind: 'authorize-decision', label: `Authorize decision [REAL]: ${decisionOutcome}, read from the gateway's answer to tools/call`, from: 'gateway', to: 'authorize', verdict: last.kind === 'ok' ? 'ok' : last.kind === 'hold' ? 'held' : 'deny', traceparent: last.traceparent,
+      kind: 'authorize-decision', label: `Authorize decision: ${decisionOutcome}, read from the gateway's answer to tools/call`, from: 'gateway', to: 'authorize', verdict: last.kind === 'ok' ? 'ok' : last.kind === 'hold' ? 'held' : 'deny', traceparent: last.traceparent,
       decision: { outcome: audit?.decision ?? decisionOutcome, by: 'the Agent Gateway (REAL)' },
       note: last.kind === 'ok' ? 'The gateway let tools/call through, so its policy permitted it.' : m.note, request: { tool, arguments: argsShown(args) }, response: { status: last.status, ...(audit ? { 'x-gw-audit-trail': audit.parsed ?? audit.raw, decision: audit.decision } : {}), ...(last.headers['www-authenticate'] ? { 'www-authenticate': last.headers['www-authenticate'] } : {}) },
     });
@@ -608,14 +608,14 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
         const cibaId = cfg['MA_CIBA_CLIENT_ID'];
         const cibaSec = cfg['MA_CIBA_CLIENT_SECRET'] ?? cfg['MA_CIBA_APP_CREDENTIAL'];
         const approver = cfg.MA_CIBA_LOGIN_HINT || session?.claims?.sub;
-        push({ kind: 'ciba-authorize', label: 'CIBA backchannel [REAL]: bc-authorize to PingOne', from: 'bff', to: 'idp', verdict: 'ok', traceparent: tp(),
+        push({ kind: 'ciba-authorize', label: 'CIBA backchannel: bc-authorize to PingOne', from: 'bff', to: 'idp', verdict: 'ok', traceparent: tp(),
           request: { url: `https://auth.pingone.com/${envId}/as/bc-authorize`, login_hint: approver, binding_message: 'APPROVE $4,120 refund' } });
         let authReqId = null;
         let cibaNote = null;
         try {
           const init = await cibaBcAuthorize({ envId, clientId: cibaId, clientSecret: cibaSec, loginHint: approver, bindingMessage: 'APPROVE', fetchImpl, timeoutMs });
           authReqId = init.authReqId;
-          push({ kind: 'ciba-poll', label: `CIBA poll [REAL]: waiting for the approval on the registered authenticator (interval ${init.interval}s)`, from: 'bff', to: 'idp', verdict: 'held', traceparent: tp(),
+          push({ kind: 'ciba-poll', label: `CIBA poll: waiting for the approval on the registered authenticator (interval ${init.interval}s)`, from: 'bff', to: 'idp', verdict: 'held', traceparent: tp(),
             request: { grant_type: 'urn:openid:params:grant-type:ciba', auth_req_id: `${init.authReqId.slice(0, 8)}…` } });
           // Poll for up to 3 minutes; the approval arrives on the authenticator, not in this process.
           const deadline = Date.now() + 180_000;
@@ -627,7 +627,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
             if (p.error !== 'authorization_pending' && p.error !== 'slow_down') { pollError = p.error; break; }
           }
           if (tokens) {
-            push({ kind: 'ciba-poll', label: 'CIBA poll [REAL]: the approval arrived; the CIBA token was issued', from: 'bff', to: 'idp', verdict: 'ok', traceparent: tp(),
+            push({ kind: 'ciba-poll', label: 'CIBA poll: the approval arrived; the CIBA token was issued', from: 'bff', to: 'idp', verdict: 'ok', traceparent: tp(),
               response: { note: 'the approver completed the authentication on their registered authenticator' } });
             // Retry the tool call once. The CIBA token itself is not what the gateway consumes: the
             // gateway re-runs its policy, which now sees the approval obligation discharged through
@@ -635,22 +635,22 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
             const retry = await gs.callTool(tool, args);
             calls.push(retry); seen.push({ title: `tools/call ${tool} (after approval)`, call: retry });
             const rAudit = parseAuditTrail(retry.headers['x-gw-audit-trail']);
-            push({ kind: 'authorize-decision', label: `Authorize decision [REAL] after approval: ${retry.kind === 'ok' ? 'PERMIT' : retry.kind.toUpperCase()}, read from the gateway's answer`, from: 'gateway', to: 'authorize', verdict: retry.kind === 'ok' ? 'ok' : 'deny', traceparent: retry.traceparent,
+            push({ kind: 'authorize-decision', label: `Authorize decision after approval: ${retry.kind === 'ok' ? 'PERMIT' : retry.kind.toUpperCase()}, read from the gateway's answer`, from: 'gateway', to: 'authorize', verdict: retry.kind === 'ok' ? 'ok' : 'deny', traceparent: retry.traceparent,
               decision: { outcome: rAudit?.decision ?? (retry.kind === 'ok' ? 'PERMIT' : 'DENY'), by: 'the Agent Gateway (REAL)', note: 'the approval was collected over CIBA' } });
             if (retry.kind === 'ok') {
-              push({ kind: 'tool-dispatched', label: `MCP tool [REAL]: tools/call ${tool} (approved)`, from: 'gateway', to: 'mcp', verdict: 'ok', traceparent: retry.traceparent, note: 'The SE MCP server ran the tool after the CIBA approval.' });
+              push({ kind: 'tool-dispatched', label: `MCP tool: tools/call ${tool} (approved)`, from: 'gateway', to: 'mcp', verdict: 'ok', traceparent: retry.traceparent, note: 'The SE MCP server ran the tool after the CIBA approval.' });
               const rr = retry.rpc?.result ?? null;
-              push({ kind: 'agent-reply', label: 'Agent reply [REAL]: written from the approved tool result', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), response: { reply: replyText(tool, rr) } });
+              push({ kind: 'agent-reply', label: 'Agent reply: written from the approved tool result', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), response: { reply: replyText(tool, rr) } });
               return { outcome: 'REAL_PERMIT', reply: { who: 'Agent', text: replyText(tool, rr) } };
             }
             cibaNote = 'the approval was collected but the gateway still refused the call';
           } else {
             cibaNote = pollError ? `the CIBA poll failed: ${pollError}` : 'the approval did not arrive within 3 minutes';
-            push({ kind: 'ciba-poll', label: 'CIBA poll [REAL]: no approval in time', from: 'bff', to: 'idp', verdict: 'deny', traceparent: tp(), note: cibaNote });
+            push({ kind: 'ciba-poll', label: 'CIBA poll: no approval in time', from: 'bff', to: 'idp', verdict: 'deny', traceparent: tp(), note: cibaNote });
           }
         } catch (e) {
           cibaNote = `CIBA could not start: ${e.message}`;
-          push({ kind: 'ciba-authorize', label: 'CIBA backchannel [REAL]: bc-authorize failed', from: 'bff', to: 'idp', verdict: 'deny', traceparent: tp(), note: cibaNote });
+          push({ kind: 'ciba-authorize', label: 'CIBA backchannel: bc-authorize failed', from: 'bff', to: 'idp', verdict: 'deny', traceparent: tp(), note: cibaNote });
         }
         if (cibaNote) { rest(2, `Not run: ${cibaNote}`); return { outcome: 'REAL_CIBA_INCOMPLETE', reply: { who: 'Agent', text: `I could not complete the approval: ${cibaNote}` } }; }
       }
@@ -660,7 +660,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
     const toolFailed = last.kind === 'ok' && (!result || result.isError === true || rpcError);
     const cut = last.kind === 'ok' && !result && last.truncated;
     push({
-      kind: last.kind === 'ok' ? 'tool-dispatched' : last.kind === 'hold' ? 'tool-held' : 'tool-refused', label: `MCP tool [REAL]: tools/call ${tool}${calls.length > 1 ? ' (after get_my_accounts for your account ids)' : ''}`, from: 'gateway', to: 'mcp', verdict: last.kind === 'ok' && !toolFailed ? 'ok' : last.kind === 'hold' ? 'held' : 'deny', traceparent: last.traceparent,
+      kind: last.kind === 'ok' ? 'tool-dispatched' : last.kind === 'hold' ? 'tool-held' : 'tool-refused', label: `MCP tool: tools/call ${tool}${calls.length > 1 ? ' (after get_my_accounts for your account ids)' : ''}`, from: 'gateway', to: 'mcp', verdict: last.kind === 'ok' && !toolFailed ? 'ok' : last.kind === 'hold' ? 'held' : 'deny', traceparent: last.traceparent,
       note: last.kind === 'ok' ? (toolFailed ? 'The tool answered with an error.' : 'The SE MCP server ran the tool.') : m.note,
       request: { calls: calls.map((c) => shownReq(c, { method: 'tools/call', name: c === call ? tool : 'get_my_accounts', arguments: c === call ? argsShown(args) : {} })) },
       response: { calls: calls.map((c) => shownRes(c, c.rpc ? (c.rpc.error ? { error: { code: c.rpc.error.code ?? null, message: str(c.rpc.error.message) } } : { isError: c.rpc.result?.isError === true, content: contentShown(c.rpc.result) }) : null)) },
@@ -670,12 +670,12 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
       notRun('api-call', 'API', 'mcp', 'api', 'Not known: the tool answered with an error.');
       const why = rpcError ? str(rpcError.message) : textOf(result);
       const text = cut ? `The answer from ${tool} was larger than the lab reads, so it was cut off and not used.` : `The tool ${tool} answered with an error${why ? `: ${cleanFree(why, 300)}` : ''}.`;
-      push({ kind: 'agent-reply', label: 'Agent reply [REAL]: written from the tool\'s error', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), request: {}, response: { reply: text } });
+      push({ kind: 'agent-reply', label: 'Agent reply: written from the tool\'s error', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), request: {}, response: { reply: text } });
       return { outcome: 'REAL_TOOL_ERROR', reply: { who: 'Agent', text } };
     }
-    push({ kind: 'api-call', label: 'API [REAL]: the call behind the tool, made by the SE MCP server (seen only through its result)', from: 'mcp', to: 'api', verdict: 'ok', traceparent: last.traceparent, note: 'The lab does not see this call itself: the MCP server makes it with its own token and hands back the result.', request: { note: 'made by the SE MCP server, not by this lab' }, response: { content: contentShown(result) } });
+    push({ kind: 'api-call', label: 'API: the call behind the tool, made by the SE MCP server (seen only through its result)', from: 'mcp', to: 'api', verdict: 'ok', traceparent: last.traceparent, note: 'The lab does not see this call itself: the MCP server makes it with its own token and hands back the result.', request: { note: 'made by the SE MCP server, not by this lab' }, response: { content: contentShown(result) } });
     const text = replyText(tool, result);
-    push({ kind: 'agent-reply', label: 'Agent reply [REAL]: written from the real tool result', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), request: {}, response: { reply: text } });
+    push({ kind: 'agent-reply', label: 'Agent reply: written from the real tool result', from: 'agent', to: 'page', verdict: 'ok', traceparent: tp(), request: {}, response: { reply: text } });
     return { outcome: 'REAL_PERMIT', reply: { who: 'Agent', text } };
   }
 

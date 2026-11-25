@@ -434,7 +434,7 @@ try {
       check(await t('live-persona-note').isVisible() && (await t('persona').count()) === 0 && (await t('lab-inputs').count()) === 0, `${tag}: the persona and the lab inputs are hidden in live and the note says why`);
       await t('run').click(); await t('result').waitFor();
       check((await t('outcome').innerText()) === 'LIVE_OK' && (await t('live-note-tag').innerText()) === 'live, identity provider only' && (await t('matches').count()) === 0, `${tag}: UC7 live is LIVE_OK, labelled identity provider only, with no engine-match claim`);
-      check((await t('hop').count()) === 2 && (await t('hops').getByTestId('real-tag').count()) === 2 && (await t('hops').getByTestId('mock-tag').count()) === 0 && (await t('hops').innerText()).includes('identity provider only [REAL]'), `${tag}: two hops, both REAL (identity provider only), none MOCK`);
+      check((await t('hop').count()) === 2 && (await t('hops').getByTestId('real-tag').count()) === 2 && (await t('hops').getByTestId('mock-tag').count()) === 0 && (await t('hops').innerText()).includes('identity provider only'), `${tag}: two hops, both REAL (identity provider only), none MOCK`);
       check((await t('token-raw').innerText()) === `${FAKE_TOKEN.slice(0, 6)}...${FAKE_TOKEN.slice(-4)}` && (await t('token-claims').innerText()).includes(CLIENT_ID), `${tag}: the token is masked (first 6, last 4) and its claims are decoded`);
       const not = await t('not-run').innerText();
       check(not.includes('Not run in live mode') && not.includes('authorize-decision') && not.includes('identity provider only') && (await t('not-run').getByRole("listitem").count()) >= 1, `${tag}: the steps that were not run are listed`);

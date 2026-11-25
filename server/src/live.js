@@ -132,7 +132,7 @@ export function createLive({ config = liveConfig({}, {}), missing = [], fetchImp
       const grants = Array.isArray(meta.grant_types_supported) ? meta.grant_types_supported.filter((g) => typeof g === 'string').slice(0, 30) : [];
       const discOk = disc.status === 200 && disc.json !== null;
       push({
-        kind: 'live-discovery', label: 'Live, identity provider only [REAL]: the discovery document', from: 'lab', to: 'idp', verdict: discOk ? 'ok' : 'deny', traceparent: d1,
+        kind: 'live-discovery', label: 'Live, identity provider only: the discovery document', from: 'lab', to: 'idp', verdict: discOk ? 'ok' : 'deny', traceparent: d1,
         note: discOk ? `This environment ${grants.includes(TOKEN_EXCHANGE) ? 'advertises' : 'does not advertise'} the RFC 8693 token-exchange grant (read from grant_types_supported).` : liveFailure(disc),
         request: { method: 'GET', url: urls.discovery, headers: { traceparent: d1 } },
         response: { status: disc.status, body: discOk ? { issuer: str(meta.issuer), token_endpoint: str(meta.token_endpoint), grant_types_supported: grants, token_endpoint_auth_methods_supported: strs(meta.token_endpoint_auth_methods_supported) } : failureBody(disc) },
@@ -148,7 +148,7 @@ export function createLive({ config = liveConfig({}, {}), missing = [], fetchImp
         tokens.push({ label: 'agent client-credentials token (LIVE, masked)', mock: false, live: true, notice: 'LIVE token from your PingOne environment, shown masked (first 6 and last 4 characters): real credentials stay write-only (rule 4). The raw value is never returned or stored.', raw: mask(raw), header: dec?.header ?? null, claims: dec?.claims ?? { note: 'the token is opaque, not a JWT: there is nothing to decode' } });
       }
       push({
-        kind: 'live-actor-token', label: 'Live, identity provider only [REAL]: the worker client\'s token (client credentials)', from: 'lab', to: 'idp', verdict: tokOk ? 'ok' : 'deny', traceparent: d2,
+        kind: 'live-actor-token', label: 'Live, identity provider only: the worker client\'s token (client credentials)', from: 'lab', to: 'idp', verdict: tokOk ? 'ok' : 'deny', traceparent: d2,
         note: tokOk ? 'The lab used the worker client from the app .env as the agent client. The token is shown masked.' : liveFailure(tok),
         request: { method: 'POST', url: urls.token, headers: { traceparent: d2, 'content-type': 'application/x-www-form-urlencoded', authorization: 'Basic [write-only: the client secret is never shown]' }, body: { grant_type: 'client_credentials' } },
         response: { status: tok.status, body: tokOk ? { access_token: mask(raw), token_type: str(tok.json.token_type), expires_in: Number.isFinite(tok.json.expires_in) ? tok.json.expires_in : null, scope: str(tok.json.scope) } : failureBody(tok) },
