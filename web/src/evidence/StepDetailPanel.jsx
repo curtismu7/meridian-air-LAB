@@ -113,6 +113,8 @@ export default function StepDetailPanel({ hops = [], selected = null, onSelect, 
         {onClose && <button type="button" aria-label="Close step detail" onClick={onClose}>×</button>}
       </div>
 
+      {h.fact && h.fact !== "done" && <p className="sdp__notice" data-testid="sdp-notice"><b>Look at</b> {txt(h.fact)}</p>}
+
       <div className="sdp__cols" data-rfc={rfc ? "on" : "off"}>
         <div className="sdp__col">
           <h4>What happened</h4>

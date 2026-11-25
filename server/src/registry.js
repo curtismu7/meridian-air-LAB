@@ -49,11 +49,18 @@ function badge(entry) {
 // The local console presents a self-signed certificate (the desktop agent's own). TLS verification is
 // relaxed for THIS host only, and only when the owner has explicitly pointed MA_REGISTRY_URL at it —
 // never globally. (The alternative is shipping the agent's CA, which the owner does not publish.)
+// The console resets the TLS handshake unless the client names it: a connection by IP or by
+// host.docker.internal (no SNI it knows) is dropped. So the lab connects to the reachable host and
+// presents the console's own name (local.procyon.ai) as SNI and Host.
+const CONSOLE_NAME = new URL(REGISTRY_DEFAULT_URL).hostname;
+const LOOPBACK_ALIASES = new Set(['127.0.0.1', 'localhost', 'host.docker.internal']);
 function localGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
+    const named = LOOPBACK_ALIASES.has(u.hostname) ? { servername: CONSOLE_NAME, host: `${CONSOLE_NAME}:${u.port || 443}` } : {};
     const req = https.request({ hostname: u.hostname, port: u.port || 443, path: u.pathname + u.search, method: 'GET',
-      headers: { accept: 'application/json', ...headers }, rejectUnauthorized: false, timeout: 15_000 }, (res) => {
+      ...(named.servername ? { servername: named.servername } : {}),
+      headers: { accept: 'application/json', ...(named.host ? { host: named.host } : {}), ...headers }, rejectUnauthorized: false, timeout: 15_000 }, (res) => {
       let text = '';
       res.on('data', (c) => { text += c; });
       res.on('end', () => resolve({ status: res.statusCode, json: (() => { try { return JSON.parse(text); } catch { return {}; } })() }));
@@ -67,7 +74,7 @@ function localGet(url, headers = {}) {
 // The local console listens on the Mac's loopback. A host run reaches it at 127.0.0.1; a Docker run at
 // host.docker.internal. The configured base names ONE of them; the read tries the other as a fallback
 // (same host family, the console's own certificate, no other host is ever tried).
-const ALT_HOSTS = { 'host.docker.internal': '127.0.0.1', '127.0.0.1': 'host.docker.internal', 'localhost': 'host.docker.internal' };
+const ALT_HOSTS = { 'local.procyon.ai': 'host.docker.internal', 'host.docker.internal': '127.0.0.1', '127.0.0.1': 'host.docker.internal', 'localhost': 'host.docker.internal' };
 const alternates = (base) => {
   const u = new URL(base);
   const alt = ALT_HOSTS[u.hostname];
@@ -75,16 +82,18 @@ const alternates = (base) => {
 };
 
 export async function listKeys({ base, tenant } = {}) {
-  let last = null;
+  // A host that ANSWERED (an HTTP status) says more than one that could not be reached, so that error wins; otherwise the FIRST host's failure
+  // is reported (a fallback host's refusal must not replace it).
+  let first = null; let answered = null;
   for (const b of alternates(base)) {
     const session = crypto.randomUUID();
     let r;
-    try { r = await localGet(`${b}/api/${tenant}/v1/agentaccesskeys/default`, { 'x-procyon-session-id': session }); }
-    catch (e) { last = e; continue; }
+    try { r = await localGet(`${b}/api/${tenant}/v1/agentaccesskeys?ObjectMeta.Namespace=default`, { 'x-procyon-session-id': session }); }
+    catch (e) { first ??= e; continue; }
     const j = r.json;
     if (r.status === 200) return (j.AgentAccessKeys ?? []).map(badge);
-    last = new Error(`the Agent Registry answered HTTP ${r.status}: ${typeof j === 'string' ? j.slice(0, 120) : (j.message ?? '')}`.trim());
+    answered ??= new Error(`the Agent Registry answered HTTP ${r.status}: ${typeof j === 'string' ? j.slice(0, 120) : (j.message ?? '')}`.trim());
   }
-  throw (last ?? new Error('the Agent Registry was not reachable'));
+  throw (answered ?? first ?? new Error('the Agent Registry was not reachable'));
 }
 

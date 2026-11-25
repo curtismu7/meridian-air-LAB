@@ -6,6 +6,10 @@ the standards require first (a SAMPLE pill on screen, mock only); REHEARSE=1 run
 
 Usage: python3 take.py <work_dir>
   work_dir gets: sample.mp4 (SAMPLE=1) or take.mp4 (HEADLESS_REAL=1), take.log, result.json
+Two cuts (owner, 2026-11-25), both on the Movie reel page (it reads easier than the sequence diagram):
+  CUT=overview (default)  the scene tour: intro slide, the hop list, the reel
+  CUT=detail              the walk-through: per scene, click every reel frame, scroll to its detail and explain it, with the fields that matter highlighted
+                          (output detail.mp4 / detail-sample.mp4; SCENES_ONLY=MA1,MA4 limits it)
 """
 import json, os, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -28,9 +32,13 @@ PROFILES = {"monitor": dict(viewport=(1920, 1080), dsf=1, scale=1.3, font="L"),
 _prof = PROFILES[PROFILE_NAME]
 VW, VH = (int(os.environ.get("VW", 0)) or _prof["viewport"][0]), (int(os.environ.get("VH", 0)) or _prof["viewport"][1])
 SCALE = float(os.environ.get("SCALE", _prof["scale"]))
-OUT = WORK / ("take.mp4" if HEADLESS_REAL else "sample.mp4")
+CUT = os.environ.get("CUT", "overview")
+if CUT not in ("overview", "detail"): raise SystemExit(f"take.py: CUT must be overview or detail, not {CUT!r}")
+DETAIL = CUT == "detail"
+OUT = WORK / (("detail" if DETAIL else "take") + ".mp4" if HEADLESS_REAL else ("detail-sample.mp4" if DETAIL else "sample.mp4"))
 SCENES = ["MA1", "MA2", "MA3", "MA4", "MA5", "MA6", "MA7", "MA8", "MA9", "MA10", "MA11"]   # the full catalog, one intro slide before each (owner, 2026-11-25)
-TOTAL = None   # set in main(): sign-in + 3 captions per scene (hops, sequence, reel) + the closing hop-line
+if os.environ.get("SCENES_ONLY"): SCENES = [u.strip() for u in os.environ["SCENES_ONLY"].split(",") if u.strip() in SCENES]
+TOTAL = None   # set in main(): sign-in + 2 captions per scene (hops, reel) + the closing hop-line (overview cut)
 
 def log(*a):
     WORK.mkdir(parents=True, exist_ok=True)
@@ -130,7 +138,7 @@ def main():
             page.select_option('[data-testid="mode-select"]', "mock"); page.wait_for_timeout(800)
             log("switched to mock for the sample cut")
         count = {"n": 0}
-        TOTAL = 2 + 4 * len(SCENES)   # sign-in, then per scene: the intro slide, the hops bubble, the sequence shot and the reel shot
+        TOTAL = 2 + 3 * len(SCENES)   # sign-in, then per scene: the intro slide, the hops bubble and the reel shot
         shots = os.environ.get("REHEARSE_SHOTS")
 
         def snap(name):
@@ -144,10 +152,10 @@ def main():
             st = STEPS[key]
             caption(st["title"], st["text"].replace(" {hops}", ""), target=target, lines=lines, secs=secs, prefer=prefer)
 
-        def caption(title, text, target=None, lines=None, secs=None, prefer=None):
-            """A caption with wording given here (the per-scene diagram shots), not from captions.md."""
+        def caption(title, text, target=None, lines=None, secs=None, prefer=None, n=None, total=None):
+            """A caption with wording given here (the per-scene diagram shots), not from captions.md. n/total override the take's own count (the detail cut counts steps within a scene)."""
             count["n"] += 1
-            page.evaluate("o => window.__cm.cap(o)", dict(n=count["n"], total=TOTAL, title=title, text=text, target=target, lines=lines, prefer=prefer))
+            page.evaluate("o => window.__cm.cap(o)", dict(n=n if n is not None else count["n"], total=total if total is not None else TOTAL, title=title, text=text, target=target, lines=lines, prefer=prefer))
             snap(f"step-{count['n']:02d}")
             page.wait_for_timeout(int((secs if secs is not None else hold_bubble(page, text, lines)) * 1000 * (0.04 if REHEARSE else 1)))
             page.evaluate("() => window.__cm.clear()")
@@ -164,6 +172,59 @@ def main():
             page.wait_for_timeout(max(0, total_ms - pre_ms))
             page.evaluate("() => window.__cm.clear()")
             if name == "closing": clip["last"] = time.monotonic() - clock0
+
+        def walk_frames(uc):
+            """The detail cut: click every frame of the reel and explain it (owner, 2026-11-25). No pop-up: the detail panel sits right under the reel, so the
+            step is scrolled into view and the lab's own highlights do the pointing: the colored "Look at" line, then the warm-highlighted fields that matter.
+            The words come from the page (the hop's own narrative, key fact and decision), so they always match what this run did."""
+            frames = page.eval_on_selector_all('[data-testid^="frame-"]', "els => els.map(e => e.dataset.testid)")
+            page.wait_for_timeout(600)
+            for i, fid in enumerate(frames, 1):
+                page.evaluate("() => window.scrollTo(0, 0)")
+                page.click(f'[data-testid="{fid}"]')
+                page.wait_for_selector('[data-testid="step-detail"]', timeout=10000)
+                page.wait_for_timeout(500 if not REHEARSE else 50)
+                # 1. Explain the step with the reel still in view (the selected frame is lit), pointing at "What happened".
+                info = page.evaluate("""() => {
+                    const q = (s) => document.querySelector(s); const t = (e) => (e ? e.textContent.trim().replace(/\\s+/g, ' ') : '');
+                    return { title: t(q('[data-testid="step-detail"] h3')), status: t(q('[data-testid="sdp-status"]')), narrative: t(q('[data-testid="sdp-narrative"]')), decision: t(q('[data-testid="decision"]')) };
+                }""")
+                head = f"{uc} · {info['title']}" + (f" ({info['status']})" if info["status"] and info["status"].lower() != "done" else "")
+                caption(head, (info["narrative"] if len(info["narrative"]) <= 300 else info["narrative"][:300].rsplit(" ", 1)[0] + "…") or info["title"], target='[data-testid="sdp-narrative"]', prefer="below", n=i, total=len(frames))
+                # 2. Then the field that matters. Open every collapsed field of the request and response so the values (grant type, scope, tool,
+                #    arguments) are on screen, pick the most telling visible one (the tool and its arguments first, the bare status last) and scroll to it.
+                hot = page.evaluate("""() => {
+                    document.querySelectorAll('[data-testid="step-detail"] details:not([open])').forEach((d) => { d.open = true; });
+                    const t = (e) => (e ? e.textContent.trim().replace(/\\s+/g, ' ') : '');
+                    // The most telling field first: the decision, the tool and its arguments, the money and the pushed details, scope and grant;
+                    // tokens, trace ids and the bare HTTP status last (they are on every hop and say little).
+                    const rows = [...document.querySelectorAll('[data-testid="step-detail"] .jform__row[data-hot="true"]')].filter((r) => r.getClientRects().length > 0);
+                    const leaf = (k) => k.split('.').pop();
+                    const score = (r) => {
+                        const k = t(r.querySelector('.jform__k')), v = t(r.querySelector('.jform__v')), l = leaf(k);
+                        if (l === 'status') return 90;
+                        if (/authorization|access_token|id_token|refresh_token|traceparent|secret/i.test(k) || v.length > 100) return 80;
+                        if (l === 'decision') return 0; if (l === 'tool' || k.endsWith('params.name')) return 1; if (k.includes('arguments')) return 2;
+                        if (l === 'amount' || l === 'authorization_details') return 3; if (l === 'scope' || l === 'grant_type') return 4; return 50;
+                    };
+                    rows.sort((a, b) => score(a) - score(b));
+                    document.querySelectorAll('[data-cm-pick]').forEach((e) => e.removeAttribute('data-cm-pick'));
+                    const r = rows[0];
+                    if (!r) return null;
+                    r.setAttribute('data-cm-pick', '1');
+                    return { key: t(r.querySelector('.jform__k')), val: t(r.querySelector('.jform__v')) };
+                }""")
+                if info["decision"]:
+                    page.evaluate("() => document.querySelector('[data-testid=\"decision\"]').scrollIntoView({ block: 'center' })")
+                    page.wait_for_timeout(300 if not REHEARSE else 50)
+                    caption(head, f"The decision: {info['decision'][:160]}", target='[data-testid="decision"]', prefer="left", secs=4, n=i, total=len(frames))
+                elif hot:
+                    val = hot["val"] if len(hot["val"]) <= 70 else hot["val"][:40] + "… (shortened)"
+                    page.evaluate("() => document.querySelector('[data-cm-pick]').scrollIntoView({ block: 'center' })")
+                    page.wait_for_timeout(300 if not REHEARSE else 50)
+                    caption(head, f"Highlighted: {hot['key']}" + (f" = {val}" if val else "") + ". This is the field that matters in this step.",
+                            target='[data-cm-pick]', prefer="left", secs=4, n=i, total=len(frames))
+            page.evaluate("() => window.scrollTo(0, 0)")
 
         def run_scene(uc, key, wait_s=25):
             # The prompt picker is a <select> (wtt-select, options wtt-opt-<uc>) since the dropdown
@@ -187,26 +248,29 @@ def main():
             # The details the owner asked the video to show (2026-11-25): open every hop of this run so the
             # request/response JSON is on screen, then point the caption at the expanded hop list. The hop
             # labels come from the page, so the bubble names the tools this run actually used.
-            page.evaluate("() => { const t = document.querySelector('[data-testid=\"hops-toggle\"]'); if (t && t.textContent.includes('Open all')) t.click(); }")
-            page.wait_for_timeout(600)
-            hops = page.eval_on_selector_all('[data-testid="hop"] summary .hop__label', "els => els.slice(0, 4).map(e => e.textContent.trim())")
-            hop_lines = hops if hops else []
-            if len(hops) > 4: hop_lines.append(f"... {len(hops)} hops in all")
-            bubble(key, target='[data-testid="hops"]', lines=hop_lines or None, prefer="left")
-            # The full-page sequence diagram, then the movie reel (owner: "we have the sequence diagram and reel
-            # so explain the tools used and show details"): each gets a short caption naming what is on screen.
+            if not DETAIL:
+                page.evaluate("() => { const t = document.querySelector('[data-testid=\"hops-toggle\"]'); if (t && t.textContent.includes('Open all')) t.click(); }")
+                page.wait_for_timeout(600)
+                hops = page.eval_on_selector_all('[data-testid="hop"] summary .hop__label', "els => els.slice(0, 4).map(e => e.textContent.trim())")
+                hop_lines = hops if hops else []
+                if len(hops) > 4: hop_lines.append(f"... {len(hops)} hops in all")
+                bubble(key, target='[data-testid="hops"]', lines=hop_lines or None, prefer="left")
+            # The Movie reel page (owner, 2026-11-25: the reel is easier to follow than the sequence diagram, so the video
+            # uses it). The page opens on the sequence tab; switch to the reel before anything is shown.
             page.click('[data-testid="full-sequence"]')
             page.wait_for_selector('[data-testid="page-sequence"]', timeout=15000)
-            page.wait_for_timeout(1200)
-            caption(f"{uc} · sequence — every hop, in order",
-                    "The run as a sequence diagram: browser, identity provider, agent, gateway, tools. Each arrow is one hop of this run; click a box for its detail.",
-                    target='[data-testid="page-sequence"] .fullpage__main', prefer="below", secs=6)
             page.click('[data-testid="full-tab-reel"]')
             page.wait_for_selector('[data-testid="page-reel"]', timeout=15000)
             page.wait_for_timeout(1200)
-            caption(f"{uc} · movie reel — the same hops, step by step",
-                    "The reel plays the hops one at a time with each request and response beside it: the tool called, the arguments, the verdict.",
-                    target='[data-testid="page-reel"] .fullpage__main', prefer="below", secs=6)
+            if DETAIL:
+                walk_frames(uc)
+            else:
+                # A step the chat had selected would leave its detail open under the reel and hide behind the caption: show the reel alone.
+                page.evaluate("() => { const b = document.querySelector('[aria-label=\"Close step detail\"]'); if (b) b.click(); }")
+                page.wait_for_timeout(300)
+                caption(f"{uc} · movie reel",
+                        "One frame per hop of this run, left to right: who it ran on, what it did, the one fact that matters and the verdict. Click a frame for its detail.",
+                        target='[data-testid="page-reel"] .fullpage__main', prefer="below", secs=6)
             page.click('[data-testid="back-to-chat"]')
             page.wait_for_selector('[data-testid="wtt-select"]', timeout=15000)
 
@@ -220,21 +284,21 @@ def main():
             page.fill('[data-testid="signin-password"]', pw)
             page.click('[data-testid="signin-submit"]')
             page.wait_for_selector("text=Signed in", timeout=30000)
-        bubble("signin", target='[data-testid="mode-select"]', prefer="below")
+        if not DETAIL: bubble("signin", target='[data-testid="mode-select"]', prefer="below")
         for uc in SCENES:
             slide = SLIDES.get(uc.lower())
             if slide:
                 show_slide(slide, name=f"slide-{uc.lower()}")   # the intro: title, products used, the value (owner: a clear slide between use cases)
             run_scene(uc, uc.lower())
-        bubble("hops", target='[data-testid="evidence-count"]', prefer="below")
+        if not DETAIL: bubble("hops", target='[data-testid="evidence-count"]', prefer="below")
         show_slide(CLOSING_SLIDE, name="closing")
         page.wait_for_timeout(200 if REHEARSE else 1500)
         if MASK_SCRIPT:   # a public video: no real value may have been on the page at ANY point of this take
             try: leaks = page.evaluate("() => window.__onscreenMaskLeaks ? window.__onscreenMaskLeaks() : -1")
             except Exception: leaks = -1
             result["mask_leaks"] = leaks; log("on-screen mask check: leaks =", leaks)
-            if leaks != 0: result["ok"] = False; log("WARNING: real values reached the page (or the mask did not load): do not publish this take")
-        result["ok"] = True
+            if leaks != 0: log("WARNING: real values reached the page (or the mask did not load): do not publish this take")
+        result["ok"] = result.get("mask_leaks", 0) == 0   # a take that leaked is never ok
         result["clip"] = clip_window(clip["first"], clip["last"]); log("clip window (s):", result["clip"])
         video = page.video
         ctx.close()

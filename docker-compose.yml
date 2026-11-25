@@ -56,6 +56,10 @@ services:
       MA_BRAIN_URL: ${MA_BRAIN_URL:-}
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-meridian-air.local.ping-devops.com}
       NODE_EXTRA_CA_CERTS: /certs/mkcert-rootCA.pem
+    # MA4's Real leg (MA_A2A_URL) names the shared lab proxy as local.ping-devops.com, which inside this
+    # container would be loopback. Point it at the Mac's published proxy (host-gateway = OrbStack's host).
+    extra_hosts:
+      - "local.ping-devops.com:host-gateway"
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]

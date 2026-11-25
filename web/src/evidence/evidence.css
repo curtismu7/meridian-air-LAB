@@ -38,18 +38,6 @@
 .sq[data-font="small"] { --ev-font: 0.85; }
 .sq[data-font="large"] { --ev-font: 1.18; }
 .sq-stage { position: relative; display: grid; gap: 8px; min-width: 0; }
-.sq-actors { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px; }
-.sq-actor { display: flex; align-items: center; gap: 8px; min-width: 0; text-align: left; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--border); border-top: 3px solid var(--lane); background: var(--surface); color: var(--text); font-weight: 500; }
-.sq-actor[data-state="idle"] { opacity: 0.72; }
-.sq-actor[aria-pressed="true"] { background: var(--surface-2); color: var(--text); border-color: var(--lane); outline: 2px solid var(--lane); }
-.sq-actor__txt { display: grid; min-width: 0; }
-.sq-actor__txt b { font-size: 13px; overflow-wrap: anywhere; }
-.sq-actor__st { font-size: 12px; color: var(--muted); font-weight: 500; }
-.sq-actor[data-state="active"] .sq-actor__st { color: var(--status-warn); font-weight: 700; }
-.sq-prog { display: flex; gap: 3px; }
-.sq-prog span { flex: 1 1 0; height: 5px; border-radius: 3px; border: 1px solid var(--border); background: var(--surface-2); }
-.sq-prog span[data-state="done"] { background: var(--status-ok); border-color: var(--status-ok); }
-.sq-prog span[data-state="on"] { background: var(--accent); border-color: var(--accent); }
 .sq-scroll { overflow: auto; max-height: 72vh; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .sq-svg { display: block; height: auto; max-width: none; }
 .sq-lbtn { cursor: pointer; }
@@ -140,7 +128,6 @@
 }
 @media (max-width: 600px) {
   .sq-bar { gap: 4px; padding: 6px; }
-  .sq-actors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sdp { padding: 10px; }
 }
 
@@ -153,3 +140,11 @@
 .ev-tag[data-state="warn"] { border-color: var(--status-warn); color: var(--status-warn); }
 .ev-tag[data-state="bad"] { border-color: var(--danger-text); color: var(--danger-text); }
 .ev-tag[data-state="info"] { border-color: var(--status-info); color: var(--status-info); }
+
+/* The step detail points at what matters (owner, 2026-11-25): one colored "Look at" line with the hop's key fact, and the
+   fields the lab marks important in the request and response get a warm highlight instead of the neutral tint. */
+.sdp__notice { margin: 8px 0 4px; padding: 8px 12px; border-left: 4px solid var(--status-warn); border-radius: 6px; background: color-mix(in srgb, var(--status-warn) 16%, transparent); font-weight: 600; }
+.sdp__notice b { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.8em; margin-right: 8px; color: var(--status-warn); }
+.sdp .jform__row[data-hot="true"] { background: color-mix(in srgb, var(--status-warn) 22%, transparent); border-left-color: var(--status-warn); }
+.sdp .jtok--hot { background: color-mix(in srgb, var(--status-warn) 28%, transparent); }
+

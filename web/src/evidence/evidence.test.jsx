@@ -304,6 +304,18 @@ describe("step detail", () => {
   });
 });
 
+describe("step detail: what to look at", () => {
+  test("a hop with a key fact shows it as one colored Look at line; a hop whose fact is only 'done' shows none", () => {
+    const withFact = UC1_RUN.map((h) => (h.n === 6 ? { ...h, fact: "tools permitted: 3" } : h));
+    const { unmount } = render(<StepDetailPanel hops={withFact} selected={6} onSelect={() => {}} />);
+    expect(screen.getByTestId("sdp-notice").textContent).toBe("Look at tools permitted: 3");
+    unmount();
+    const bare = UC1_RUN.map((h) => (h.n === 6 ? { ...h, fact: "done" } : h));
+    render(<StepDetailPanel hops={bare} selected={6} onSelect={() => {}} />);
+    expect(screen.queryByTestId("sdp-notice")).toBeNull();
+  });
+});
+
 describe("actor card", () => {
   test("an actor no table describes still gets a card with its steps", () => {
     const hops = [{ ...UC1_RUN[0], to: "lab-widget" }];
@@ -362,11 +374,13 @@ describe("review fixes", () => {
     }
   });
 
-  test("lifeline boxes stay clickable but are not extra tab stops", () => {
+  test("the top lifeline box is the keyboard way to an actor (the tile strip is gone); the bottom copy is not an extra tab stop", () => {
     render(<Harness hops={UC1_RUN} />);
-    const boxes = screen.getAllByRole("button", { name: /actor details \((top|bottom)\)/ });
-    expect(boxes.length).toBeGreaterThan(0);
-    for (const b of boxes) expect(b.getAttribute("tabindex")).toBe("-1");
+    const top = screen.getAllByRole("button", { name: /actor details \(top\)/ });
+    const bottom = screen.getAllByRole("button", { name: /actor details \(bottom\)/ });
+    expect(top.length).toBeGreaterThan(0);
+    for (const b of top) expect(b.getAttribute("tabindex")).toBe("0");
+    for (const b of bottom) expect(b.getAttribute("tabindex")).toBe("-1");
   });
 
   test("spec references show their URL as text, reachable without hover", () => {

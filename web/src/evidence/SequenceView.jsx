@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Tag } from "./Tag";
 import ActorCard from "./ActorCard";
-import { actorOf, actorsIn, isNote, laneVar, readPref, stepKey, touches, txt, verdictWord, withSkipped, writePref } from "./lanes";
+import { actorOf, actorsIn, isNote, laneVar, readPref, stepKey, txt, verdictWord, withSkipped, writePref } from "./lanes";
 import "./evidence.css";
 
 // Lifeline sequence diagram of one run, ported from AI-DEMO2's SequenceReelDiagram + SequenceActorHeader and driven by
@@ -20,7 +20,6 @@ const FONTS = ["small", "medium", "large"];
 const SPEEDS = [{ ms: 1000, label: "1s" }, { ms: 1500, label: "1.5s" }, { ms: 2600, label: "2.6s" }, { ms: 4000, label: "4s" }, { ms: 6000, label: "6s" }];
 const SPEED_DEFAULT = 2600;
 const K = { zoom: "cal.ev.seq.zoom2", font: "cal.ev.seq.font", speed: "cal.ev.seq.speed" };
-const STATE_WORD = { idle: "idle", done: "done", active: "working" };
 
 const rowLabel = (h) => `${h.n} · ${txt(h.title)}${h.verdict && h.verdict !== "ok" ? ` · ${verdictWord(h.verdict)}` : ""}`;
 const labelW = (s) => s.length * CHAR_W + 18;
@@ -80,8 +79,6 @@ export default function SequenceView({ hops = [], selected = null, onSelect }) {
   const focusN = selected ?? lastRevealed;
   const focusHop = shown.find((h) => h.n === focusN);
   const tabN = focusHop ? focusN : shown[0]?.n;
-  const done = shown.slice(0, revealed);
-  const actorState = (id) => (touches(focusHop, id) ? "active" : done.some((h) => touches(h, id)) ? "done" : "idle");
 
   // Follow flow: keep the focused row in view inside the diagram's own scroller (never scrollIntoView, which would
   // also scroll the page and drag the diagram sideways).
@@ -176,22 +173,6 @@ export default function SequenceView({ hops = [], selected = null, onSelect }) {
       </div>
 
       <div className="sq-stage">
-        <div className="sq-actors" role="group" aria-label="Actors, click one for its details">
-          {cast.map((id) => {
-            const a = actorOf(id);
-            const st = actorState(id);
-            return (
-              <button type="button" key={id} className="sq-actor" data-state={st} style={{ "--lane": laneVar(id) }} aria-pressed={actor === id}
-                aria-label={`${a.label}, ${STATE_WORD[st]}, details`} data-testid={`actor-${id}`} onClick={() => openActor(id)}>
-                <span className="ev-ini" aria-hidden="true">{a.initials}</span>
-                <span className="sq-actor__txt"><b>{a.label}</b><span className="sq-actor__st">{STATE_WORD[st]}</span></span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="sq-prog" aria-label={`Progress ${Math.min(revealed, total)} of ${total}`} role="img">
-          {shown.map((h, i) => <span key={h.n} data-state={h.n === focusN ? "on" : i < revealed ? "done" : "pending"} />)}
-        </div>
         {actor && <ActorCard actorId={actor} hops={shown} onSelect={(n) => { setActor(null); onSelect?.(n); }} onClose={() => setActor(null)} />}
 
         <div className="sq-scroll" ref={scrollRef}>
@@ -206,7 +187,8 @@ export default function SequenceView({ hops = [], selected = null, onSelect }) {
               const x = colX(id);
               const a = actorOf(id);
               const box = (y, h, ty, small, where) => (
-                <g role="button" tabIndex={-1} className="sq-lbtn" aria-label={`${a.label} actor details (${where})`} onClick={() => openActor(id)} onKeyDown={(e) => actorKey(e, id)}>
+                <g role="button" tabIndex={where === "top" ? 0 : -1} className="sq-lbtn" aria-label={`${a.label} actor details (${where})`}
+                  {...(where === "top" ? { "data-testid": `actor-${id}`, "aria-pressed": actor === id } : {})} onClick={() => openActor(id)} onKeyDown={(e) => actorKey(e, id)}>
                   <rect className="sq-lbox" x={x - laneBox / 2} y={y} width={laneBox} height={h} rx="7" />
                   <text className={`sq-lt${small ? " sq-lt--sm" : ""}`} x={x} y={ty} textAnchor="middle">{a.label}</text>
                 </g>

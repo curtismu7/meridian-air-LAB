@@ -16,6 +16,19 @@ One part: sign-in (mock persona), then scenes MA1, MA2, MA7, MA5, MA6, MA4, MA9 
     HEADLESS_REAL=1 APP_URL=http://127.0.0.1:7832 PROFILE=monitor python3 video/take.py <dir>   # 1920x1080, app text L
     HEADLESS_REAL=1 APP_URL=http://127.0.0.1:7832 PROFILE=laptop  python3 video/take.py <dir>   # 1800x1169, app text S
 
+**Two cuts (owner, 2026-11-25), both on the Movie reel page** (it reads easier than the sequence diagram, so the sequence shot is gone):
+
+    # overview (default): intro slide, hop list, the reel — per scene
+    HEADLESS_REAL=1 APP_URL=http://127.0.0.1:7832 PROFILE=monitor python3 video/take.py <dir>                 # -> take.mp4
+    # detail: per scene, every reel frame is clicked and explained; the fields that matter are highlighted
+    CUT=detail HEADLESS_REAL=1 APP_URL=http://127.0.0.1:7832 PROFILE=monitor python3 video/take.py <dir>      # -> detail.mp4
+    CUT=detail SCENES_ONLY=MA1,MA4 ...                                                                         # a shorter detail cut
+
+The detail cut has no pop-up: the step-detail panel sits right under the reel, so each step gets (1) a caption on "What happened" with the reel still in view
+(the selected frame is lit), then (2) the page scrolls to the most telling field — the decision, else the tool/arguments, money, scope or grant type, never a
+token or the bare HTTP status — which the lab highlights in warm color, with a caption naming it. All wording comes from the page (the hop's own narrative,
+key fact and decision), so it always matches what the run did. Collapsed request/response fields are opened first so the values are on screen.
+
 **The video uses the live Story's own code (2026-11-24).** `take.py` has no copy of the pop-up code, the hold formulas or the wording parser: the pop-ups and slides are the vendored `web/src/story/overlay.js`, the holds are `web/src/story/hold.js` (Normal speed is what the video always did), and the wording is whatever the running lab serves at `GET /api/captions` (the shared Story parser reading `captions.md`; this lab's `GET /api/story` is its cast story, so the video wording uses a different route). `story_bridge.py` turns the vendored modules into classic scripts for the browser; `video/test_story_bridge.py` (run by `node --test test/videoBridge.test.js` / `npm test`) fails if take.py grows its own copy. So the lab must be running (it always had to be), and to change a pop-up or a hold you change `shared/story` in AI-DEMO-Standalone and re-vendor. A rehearsal of this version gave stills matching the previous take.py's apart from random workspace ids in the evidence-count text (8 of 11 stills differ only there); the old-vs-new bubble frame differs in 0.5% of pixels.
 
 Needs node (with the repo's `node_modules`), python3 with playwright and pillow, ffmpeg, and tesseract (`brew install tesseract`). `out/` and `assets/` are gitignored. This lab's scenes show no real tenant data in the mock cut, so no `assets/` console screenshots or `.redacted.jpg` pairs are needed; if a Real cut ever puts a hostname, client id or policy name on screen, follow the masking rules in the A2A lab's `video/README.md` and `onscreen_mask.py`'s leak checks (already wired into `take.py`).

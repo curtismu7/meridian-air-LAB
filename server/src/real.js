@@ -434,7 +434,7 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
           return runEnvelope({ uc, vertical, tool, trace, rootSpan, tp, hops, tokens, outcome, reply, gatewayTrace: [] });
         }
         push({ kind: 'personal-agent-lookup', label: "Agent Registry [REAL]: reading the owner's registry over the local console API", from: 'bff', to: 'registry', verdict: 'ok', traceparent: tp(),
-          request: { url: `${rcfg.base}/api/${rcfg.tenant}/v1/agentaccesskeys/default`, note: 'x-procyon-session-id is a correlation id, not a credential; the listener trusts loopback callers' } });
+          request: { url: `${rcfg.base}/api/${rcfg.tenant}/v1/agentaccesskeys?ObjectMeta.Namespace=default`, note: 'x-procyon-session-id is a correlation id, not a credential; the listener trusts loopback callers' } });
         let keys = null; let regErr = null;
         try { keys = await listRegistryKeys(rcfg); } catch (e) { regErr = e; }
         if (regErr) {
