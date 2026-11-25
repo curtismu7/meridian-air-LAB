@@ -63,6 +63,7 @@ test('the full chain: pi.flow sign-in, agent token, TWO token exchanges (act = a
     assert.deepEqual(x.hops.slice(2, 4).map((h) => h.title), ['Exchange 1: act = agent', 'Exchange 2: for the gateway'], 'the two exchanges are told apart');
     assert.match(x.hops[2].label, /^Token exchange 1: act = agent/); assert.match(x.hops[3].label, /^Token exchange 2: for the gateway/);
     assert.ok(x.hops.every((h) => h.source === 'real' && h.mock === false && !/\[(REAL|MOCK|NOT RUN)\]/.test(h.label)), 'every hop ran for real, and a real hop carries no marker in its label (only MOCK and NOT RUN are marked)');
+    assert.ok(x.hops.every((h) => !/masked:/.test(`${h.label} ${h.title ?? ''}`)), 'no hop label is blanked by the redaction filter ("Agent token: ..." reads as a token assignment, so it is worded with parentheses)');
     assert.deepEqual([x.hops[2].response.body.act_claim, x.hops[3].response.body.act_claim], [{ sub: AGENT_CLIENT_ID }, { sub: AGENT_CLIENT_ID }], 'both exchange hops show the act they got');
     assert.equal(x.traceparent.split('-')[1], TP.split('-')[1]);
     // The Tokens tab: the user, the agent (actor), exchange 1 and the delegated (exchange 2) token, each raw with its decoded claims.
