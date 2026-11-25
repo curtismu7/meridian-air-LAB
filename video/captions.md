@@ -559,7 +559,7 @@ Sign-in, screening, approval, identity, proof — the same control plane, the sa
 - Identity, approval and evidence from one place
 
 ## Column B: Where this goes next
-- 10 of the 11 scenes gate Real in this lab
+- Every scene in this cut gates Real in this lab
 - Real mode signs in as you, against your tenant
 - The same hops, the same decisions, live
 

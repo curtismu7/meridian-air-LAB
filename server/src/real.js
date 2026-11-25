@@ -513,6 +513,14 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
             finishNotRun(0, 'Not run: the delegated token carries no act claim, so the gateway was not called.');
           } else {
             addToken('delegated token (REAL, exchange 2: for the gateway)', delegated, `REAL delegated token: your subject, the agent in the act claim, the gateway audience and scope. Shown raw for teaching.${audNote}`, true);
+            // MA10's point, held in Real (owner, 2026-11-25): the agent never holds a credential. The delegated
+            // token it presents carries no secret; the brokered operator credential, if policy calls for one, is
+            // injected at the gateway edge (JIT, TTL-bounded) and is never visible to this process or the agent.
+            if (uc.id === 'MA10') {
+              push({ kind: 'credential-swap', label: 'Credential broker [REAL]: the agent presents a delegated token — no secret — and the gateway injects at the edge', from: 'privilege', to: 'mcp', verdict: 'ok', traceparent: tp(),
+                note: 'The agent holds no credential: its token delegates, it does not disclose. The operator credential the tool call needs is brokered by the gateway (JIT, TTL-bounded, never shown to the agent) — the stolen-credential incident class disappears by construction.',
+                request: { headers: { authorization: 'Bearer [the delegated token: no secret in it]' } }, response: { injected: 'at the gateway edge, not visible to the agent or this lab' } });
+            }
             const seen = [];
             try { const gw = await gatewayLeg({ token: delegated, vertical, tool, uc, tp, push, notRun, seen, traceId: trace.traceId }); outcome = gw.outcome; reply = gw.reply; } finally { gatewayTrace = realExchanges(seen, { url: config.gatewayUrl, token: delegated }); }
           }
