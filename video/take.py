@@ -123,6 +123,11 @@ def main():
             page.click('[data-testid="rail-toggle"]')
             page.wait_for_timeout(400)
             log("setup sidebar collapsed")
+        # The evidence column shows the MOVIE REEL, never the sequence diagram (owner, 2026-11-25: the video uses the reel). It opens on Sequence, so switch it
+        # once here; the choice holds for the whole take.
+        if page.locator('[data-testid="evtab-reel"]').count():
+            page.click('[data-testid="evtab-reel"]'); page.wait_for_timeout(400)
+            log("evidence column on the movie reel")
         page.wait_for_timeout(1500)
         # the page's own mode (the badge): a headerless /api/info reports the DEFAULT workspace, not this page's
         page_mode = lambda: page.inner_text('[data-testid="mode-badge"]').strip().lower()
@@ -211,9 +216,9 @@ def main():
                     rows.sort((a, b) => score(a) - score(b));
                     document.querySelectorAll('[data-cm-pick]').forEach((e) => e.removeAttribute('data-cm-pick'));
                     const r = rows[0];
-                    if (!r) return null;
+                    if (!r || score(r) >= 80) return null;   // tokens, trace ids and the bare HTTP status say little: no second caption for this step
                     r.setAttribute('data-cm-pick', '1');
-                    return { key: t(r.querySelector('.jform__k')), val: t(r.querySelector('.jform__v')) };
+                    return { key: t(r.querySelector('.jform__k')).replace(/^calls\\[\\d+\\]\\./, ''), val: t(r.querySelector('.jform__v')) };
                 }""")
                 if info["decision"]:
                     page.evaluate("() => document.querySelector('[data-testid=\"decision\"]').scrollIntoView({ block: 'center' })")
@@ -235,15 +240,28 @@ def main():
             # default view, so bring the evidence into view before waiting for the run to start.
             if page.locator('[data-testid="evidence-count"]').count() == 0:
                 page.evaluate("() => { const t = document.querySelector('[data-testid=\"nav-agent\"]'); if (t) t.click(); }")
-            deadline = time.time() + wait_s   # a real-mode start can take 5-10 s (MA7 once slower still): the full window in every mode
+            # The count line names the run it shows ("MA3 · 9 hops · REAL"); before this scene's run lands it still shows the previous scene's (or "nothing run yet").
+            # A real-mode run can take 5-10 s (MA7 once slower still), so allow up to 40 s, then a short settle: no fixed stretch of idle screen.
+            deadline = time.time() + max(wait_s, 40)
             while time.time() < deadline:
-                if "nothing run yet" not in page.inner_text('[data-testid="evidence-count"]'):
+                if page.inner_text('[data-testid="evidence-count"]').strip().startswith(uc + " "):
                     break
                 page.wait_for_timeout(400)
             else:
                 raise RuntimeError(f"{uc}: the run never started")
-            page.wait_for_timeout(int((wait_s if not REHEARSE else 0.5) * 1000))
+            page.wait_for_timeout(2000 if not REHEARSE else 300)
             ev = page.inner_text('[data-testid="evidence-count"]').strip()
+            # A Real run that shows "+N not in this run" lost a hop to a transient failure (the SE gateway, or the registry, did not answer in time under
+            # the recorder's load): run the scene again, up to twice, so the take shows a complete run. Mock always lists the hops it does not run, so
+            # this is Real only. Every retry is logged and counted in result.json (a take that never recovers still records its blemish there).
+            tries = 0
+            while HEADLESS_REAL and " REAL" in ev and "not in this run" in ev and tries < 2:
+                tries += 1
+                log(f"{uc}: incomplete Real run ({ev!r}); retry {tries}")
+                page.select_option('[data-testid="wtt-select"]', uc)
+                page.wait_for_timeout(15000 if not REHEARSE else 500)   # the re-run shows the same text, so wait a window long enough for a Real run
+                ev = page.inner_text('[data-testid="evidence-count"]').strip()
+            if tries: result.setdefault("retries", {})[uc] = tries
             log(f"{uc}: evidence={ev!r}")
             result[f"{uc}_evidence"] = ev
             # The details the owner asked the video to show (2026-11-25): open every hop of this run so the
@@ -298,7 +316,9 @@ def main():
             except Exception: leaks = -1
             result["mask_leaks"] = leaks; log("on-screen mask check: leaks =", leaks)
             if leaks != 0: log("WARNING: real values reached the page (or the mask did not load): do not publish this take")
-        result["ok"] = result.get("mask_leaks", 0) == 0   # a take that leaked is never ok
+        blemished = [k[:-9] for k, v in result.items() if k.endswith("_evidence") and HEADLESS_REAL and " REAL" in v and "not in this run" in v]
+        if blemished: log("WARNING: scenes that still show hops not run after the retries:", blemished); result["blemished"] = blemished
+        result["ok"] = result.get("mask_leaks", 0) == 0 and not blemished   # a take that leaked, or still shows a failed hop, is never ok
         result["clip"] = clip_window(clip["first"], clip["last"]); log("clip window (s):", result["clip"])
         video = page.video
         ctx.close()
