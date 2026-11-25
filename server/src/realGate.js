@@ -57,7 +57,11 @@ export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = reg
   }
   // The chain decides: the catalog's `needs` list names the products the scene's story touches (every Meridian scene touches Privilege),
   // not the hops the engine runs; only a real Privilege-lane hop (credential-swap, id-jag, ...) keeps a use case Mock.
-  if (chain.some((k) => PRIVILEGE_LANE.test(k))) return { real: false, reason: 'the Privilege, PingFederate and ID-JAG lanes are not part of this Real path' };
+  // MA10 is the one exception (owner, 2026-11-25): its credential-swap chain runs the same delegated-token
+  // Real path as MA1 — sign-in, agent token, the two RFC 8693 exchanges, the gateway — and the brokered
+  // credential itself is injected at the gateway edge (JIT), so the agent never holds one. That is the scene's
+  // point, and it holds in Real: the delegated token carries no secret for the agent to leak.
+  if (chain.some((k) => PRIVILEGE_LANE.test(k)) && uc.id !== 'MA10') return { real: false, reason: 'the Privilege, PingFederate and ID-JAG lanes are not part of this Real path' };
   if (chain.includes('personal-agent-lookup')) {
     // MA5 is the one registry scene with a Real path: the badge is read live from the owner's Privilege
     // Agent Registry (the local console API; MA_REGISTRY_TENANT). Other personal-agent scenes stay Mock.
