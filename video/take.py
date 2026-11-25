@@ -30,7 +30,7 @@ VW, VH = (int(os.environ.get("VW", 0)) or _prof["viewport"][0]), (int(os.environ
 SCALE = float(os.environ.get("SCALE", _prof["scale"]))
 OUT = WORK / ("take.mp4" if HEADLESS_REAL else "sample.mp4")
 SCENES = ["MA1", "MA2", "MA7", "MA5", "MA6", "MA4", "MA9"]   # the sample's tour order
-TOTAL = 2 + len(SCENES)   # sign-in, the scenes, one closing hop-line
+TOTAL = None   # set in main(): sign-in + 3 captions per scene (hops, sequence, reel) + the closing hop-line
 
 def log(*a):
     WORK.mkdir(parents=True, exist_ok=True)
@@ -56,7 +56,7 @@ def clip_window(first, last, delay=0.05, tail=0.8):
     return {"start": round(start, 2), "end": round(last + tail, 2) if last is not None else None}
 
 def main():
-    global OPENING_SLIDE, CLOSING_SLIDE, STEPS, SLIDES
+    global OPENING_SLIDE, CLOSING_SLIDE, STEPS, SLIDES, TOTAL
     WORK.mkdir(parents=True, exist_ok=True)
     result = {"ok": False}
     try:   # the wording, from the lab's /api/captions (the one shared parser), checked to be this checkout's captions.md
@@ -85,6 +85,17 @@ def main():
         ctx.add_init_script("window.__cmScale = " + json.dumps(SCALE) + ";")
         ctx.add_init_script("window.__pillText = " + json.dumps("SAMPLE: simulated stand-in, not a live run" if SAMPLE and not HEADLESS_REAL else None) + ";")
         ctx.add_init_script(overlay_script())
+        # The take's own bubble sizing (owner 2026-11-25): smaller caption bubbles than the shared overlay's default,
+        # so more of the app shows through. Only width and font; placement logic still measures the drawn bubble.
+        ctx.add_init_script("""
+          document.addEventListener('DOMContentLoaded', () => {
+            const S = window.__cmScale || 1; const st = document.createElement('style'); st.id = 'cm-take-style';
+            st.textContent = `.story-bub{width:${Math.round(360 * S)}px !important;font:${Math.round(15 * S)}px/1.35 system-ui,sans-serif !important;padding:${Math.round(11 * S)}px ${Math.round(15 * S)}px ${Math.round(11 * S)}px ${Math.round(52 * S)}px !important}
+              .story-bub .n{width:${Math.round(28 * S)}px;height:${Math.round(28 * S)}px;font:700 ${Math.round(15 * S)}px/${Math.round(28 * S)}px system-ui !important}
+              .story-bub ul{margin:${Math.round(6 * S)}px 0 0 !important} .story-bub li{font-size:${Math.round(13 * S)}px !important}`;
+            document.documentElement.appendChild(st);
+          });
+        """)
         if RECORD := (SAMPLE or HEADLESS_REAL) and not REHEARSE:   # the page's own video starts when the page is created: make it ours, so the clip window is measured from the same moment
             initial = list(ctx.pages); page = ctx.new_page(); clock0 = time.monotonic()
             for p in initial: p.close()
@@ -95,15 +106,31 @@ def main():
         page.wait_for_selector('[data-testid="mode-select"]')
         if page.locator('[data-testid="theme-select"]').count():
             page.select_option('[data-testid="theme-select"]', THEME)
+        # The Agent detail tab first: the sidebar-toggle button lives there (the Chat tab has none).
+        page.evaluate("() => { document.querySelector('[data-testid=\"nav-agent\"]')?.click(); }")
+        page.wait_for_timeout(600)
+        # Collapse the setup sidebar (owner, 2026-11-25): chat and evidence get the room before anything is recorded.
+        if page.locator('[data-testid="sidebar-toggle"][aria-expanded="true"]').count():
+            page.click('[data-testid="sidebar-toggle"]')
+            page.wait_for_timeout(400)
+            log("setup sidebar collapsed")
         page.wait_for_timeout(1500)
-        mode = page.evaluate("fetch('/api/info').then(r => r.json()).then(j => j.source)")
+        # the page's own mode (the badge): a headerless /api/info reports the DEFAULT workspace, not this page's
+        page_mode = lambda: page.inner_text('[data-testid="mode-badge"]').strip().lower()
+        mode = page_mode()
         log("lab mode:", mode)
         if HEADLESS_REAL and mode != "real":
-            raise RuntimeError("HEADLESS_REAL needs Real mode; switch it in the UI first")
+            # through the UI: the button row (Sign in) is React state, an API-only switch leaves the page still in mock
+            page.select_option('[data-testid="mode-select"]', "real"); page.wait_for_timeout(1200)
+            mode = page_mode()
+            log("switched to real for the real cut; mode:", mode)
+        if HEADLESS_REAL and mode != "real":
+            raise RuntimeError("HEADLESS_REAL needs Real mode; could not switch it")
         if SAMPLE and not HEADLESS_REAL and mode == "real":
             page.select_option('[data-testid="mode-select"]', "mock"); page.wait_for_timeout(800)
             log("switched to mock for the sample cut")
         count = {"n": 0}
+        TOTAL = 2 + 3 * len(SCENES)   # sign-in, then per scene: the hops bubble, the sequence shot and the reel shot
         shots = os.environ.get("REHEARSE_SHOTS")
 
         def snap(name):
@@ -113,11 +140,15 @@ def main():
 
         def bubble(key, target=None, lines=None, secs=None, prefer=None):
             """One numbered caption, drawn by the shared overlay and held for the shared formula."""
-            count["n"] += 1
             st = STEPS[key]
-            page.evaluate("o => window.__cm.cap(o)", dict(n=count["n"], total=TOTAL, title=st["title"], text=st["text"], target=target, lines=lines, prefer=prefer))
-            snap(f"step-{count['n']:02d}-{key}")
-            page.wait_for_timeout(int((secs if secs is not None else hold_bubble(page, st["text"], lines)) * 1000 * (0.04 if REHEARSE else 1)))
+            caption(st["title"], st["text"], target=target, lines=lines, secs=secs, prefer=prefer)
+
+        def caption(title, text, target=None, lines=None, secs=None, prefer=None):
+            """A caption with wording given here (the per-scene diagram shots), not from captions.md."""
+            count["n"] += 1
+            page.evaluate("o => window.__cm.cap(o)", dict(n=count["n"], total=TOTAL, title=title, text=text, target=target, lines=lines, prefer=prefer))
+            snap(f"step-{count['n']:02d}")
+            page.wait_for_timeout(int((secs if secs is not None else hold_bubble(page, text, lines)) * 1000 * (0.04 if REHEARSE else 1)))
             page.evaluate("() => window.__cm.clear()")
 
         def show_slide(cfg, name="slide"):
@@ -141,7 +172,7 @@ def main():
             # default view, so bring the evidence into view before waiting for the run to start.
             if page.locator('[data-testid="evidence-count"]').count() == 0:
                 page.evaluate("() => { const t = document.querySelector('[data-testid=\"nav-agent\"]'); if (t) t.click(); }")
-            deadline = time.time() + (wait_s * 0.2 if REHEARSE else wait_s)
+            deadline = time.time() + wait_s   # a real-mode start can take 5-10 s (MA7 once slower still): the full window in every mode
             while time.time() < deadline:
                 if "nothing run yet" not in page.inner_text('[data-testid="evidence-count"]'):
                     break
@@ -152,13 +183,41 @@ def main():
             ev = page.inner_text('[data-testid="evidence-count"]').strip()
             log(f"{uc}: evidence={ev!r}")
             result[f"{uc}_evidence"] = ev
-            bubble(key, target='[data-testid="evidence-count"]', prefer="left")
+            # The details the owner asked the video to show (2026-11-25): open every hop of this run so the
+            # request/response JSON is on screen, then point the caption at the expanded hop list. The hop
+            # labels come from the page, so the bubble names the tools this run actually used.
+            page.evaluate("() => { const t = document.querySelector('[data-testid=\"hops-toggle\"]'); if (t && t.textContent.includes('Open all')) t.click(); }")
+            page.wait_for_timeout(600)
+            hops = page.eval_on_selector_all('[data-testid="hop"] summary .hop__label', "els => els.slice(0, 4).map(e => e.textContent.trim())")
+            hop_lines = hops if hops else []
+            if len(hops) > 4: hop_lines.append(f"... {len(hops)} hops in all")
+            bubble(key, target='[data-testid="hops"]', lines=hop_lines or None, prefer="left")
+            # The full-page sequence diagram, then the movie reel (owner: "we have the sequence diagram and reel
+            # so explain the tools used and show details"): each gets a short caption naming what is on screen.
+            page.click('[data-testid="full-sequence"]')
+            page.wait_for_selector('[data-testid="page-sequence"]', timeout=15000)
+            page.wait_for_timeout(1200)
+            caption(f"{uc} · sequence — every hop, in order",
+                    "The run as a sequence diagram: browser, identity provider, agent, gateway, tools. Each arrow is one hop of this run; click a box for its detail.",
+                    target='[data-testid="page-sequence"] .fullpage__main', prefer="below", secs=6)
+            page.click('[data-testid="full-tab-reel"]')
+            page.wait_for_selector('[data-testid="page-reel"]', timeout=15000)
+            page.wait_for_timeout(1200)
+            caption(f"{uc} · movie reel — the same hops, step by step",
+                    "The reel plays the hops one at a time with each request and response beside it: the tool called, the arguments, the verdict.",
+                    target='[data-testid="page-reel"] .fullpage__main', prefer="below", secs=6)
+            page.click('[data-testid="back-to-chat"]')
+            page.wait_for_selector('[data-testid="wtt-select"]', timeout=15000)
 
         show_slide(OPENING_SLIDE, name="slide-opening")
         if HEADLESS_REAL:
             page.click('[data-testid="sign-in"]')
-            page.wait_for_timeout(800)
-            page.click('button:has-text("Sign in")')
+            page.wait_for_selector('[data-testid="signin-password"]', timeout=10000)
+            pw = os.environ.get("MA_VIDEO_PASSWORD")
+            if not pw:
+                raise RuntimeError("HEADLESS_REAL needs MA_VIDEO_PASSWORD in the environment (never committed)")
+            page.fill('[data-testid="signin-password"]', pw)
+            page.click('[data-testid="signin-submit"]')
             page.wait_for_selector("text=Signed in", timeout=30000)
         bubble("signin", target='[data-testid="mode-select"]', prefer="below")
         for uc in SCENES:
