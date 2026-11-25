@@ -122,6 +122,11 @@ def main():
             page.click('[data-testid="sidebar-toggle"]')
             page.wait_for_timeout(400)
             log("setup sidebar collapsed")
+        # The evidence column shows the MOVIE REEL, never the sequence diagram (owner, 2026-11-25: the video uses the reel). It opens on Sequence, so switch it
+        # once here; the choice holds for the whole take.
+        if page.locator('[data-testid="evtab-reel"]').count():
+            page.click('[data-testid="evtab-reel"]'); page.wait_for_timeout(400)
+            log("evidence column on the movie reel")
         page.wait_for_timeout(1500)
         # the page's own mode (the badge): a headerless /api/info reports the DEFAULT workspace, not this page's
         page_mode = lambda: page.inner_text('[data-testid="mode-badge"]').strip().lower()
@@ -234,14 +239,16 @@ def main():
             # default view, so bring the evidence into view before waiting for the run to start.
             if page.locator('[data-testid="evidence-count"]').count() == 0:
                 page.evaluate("() => { const t = document.querySelector('[data-testid=\"nav-agent\"]'); if (t) t.click(); }")
-            deadline = time.time() + wait_s   # a real-mode start can take 5-10 s (MA7 once slower still): the full window in every mode
+            # The count line names the run it shows ("MA3 · 9 hops · REAL"); before this scene's run lands it still shows the previous scene's (or "nothing run yet").
+            # A real-mode run can take 5-10 s (MA7 once slower still), so allow up to 40 s, then a short settle: no fixed stretch of idle screen.
+            deadline = time.time() + max(wait_s, 40)
             while time.time() < deadline:
-                if "nothing run yet" not in page.inner_text('[data-testid="evidence-count"]'):
+                if page.inner_text('[data-testid="evidence-count"]').strip().startswith(uc + " "):
                     break
                 page.wait_for_timeout(400)
             else:
                 raise RuntimeError(f"{uc}: the run never started")
-            page.wait_for_timeout(int((wait_s if not REHEARSE else 0.5) * 1000))
+            page.wait_for_timeout(2000 if not REHEARSE else 300)
             ev = page.inner_text('[data-testid="evidence-count"]').strip()
             # A Real run that shows "+N not in this run" lost a hop to a transient failure (the SE gateway, or the registry, did not answer in time under
             # the recorder's load): run the scene again, up to twice, so the take shows a complete run. Mock always lists the hops it does not run, so
@@ -251,7 +258,7 @@ def main():
                 tries += 1
                 log(f"{uc}: incomplete Real run ({ev!r}); retry {tries}")
                 page.select_option('[data-testid="wtt-select"]', uc)
-                page.wait_for_timeout(int((wait_s if not REHEARSE else 0.5) * 1000))
+                page.wait_for_timeout(15000 if not REHEARSE else 500)   # the re-run shows the same text, so wait a window long enough for a Real run
                 ev = page.inner_text('[data-testid="evidence-count"]').strip()
             if tries: result.setdefault("retries", {})[uc] = tries
             log(f"{uc}: evidence={ev!r}")
