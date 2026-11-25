@@ -74,7 +74,7 @@ function localGet(url, headers = {}) {
 // The local console listens on the Mac's loopback. A host run reaches it at 127.0.0.1; a Docker run at
 // host.docker.internal. The configured base names ONE of them; the read tries the other as a fallback
 // (same host family, the console's own certificate, no other host is ever tried).
-const ALT_HOSTS = { 'host.docker.internal': '127.0.0.1', '127.0.0.1': 'host.docker.internal', 'localhost': 'host.docker.internal' };
+const ALT_HOSTS = { 'local.procyon.ai': 'host.docker.internal', 'host.docker.internal': '127.0.0.1', '127.0.0.1': 'host.docker.internal', 'localhost': 'host.docker.internal' };
 const alternates = (base) => {
   const u = new URL(base);
   const alt = ALT_HOSTS[u.hostname];
@@ -82,16 +82,16 @@ const alternates = (base) => {
 };
 
 export async function listKeys({ base, tenant } = {}) {
-  let last = null;
+  let first = null;   // the FIRST host's failure is the real cause; a fallback host's refusal must not replace it
   for (const b of alternates(base)) {
     const session = crypto.randomUUID();
     let r;
     try { r = await localGet(`${b}/api/${tenant}/v1/agentaccesskeys?ObjectMeta.Namespace=default`, { 'x-procyon-session-id': session }); }
-    catch (e) { last = e; continue; }
+    catch (e) { first ??= e; continue; }
     const j = r.json;
     if (r.status === 200) return (j.AgentAccessKeys ?? []).map(badge);
-    last = new Error(`the Agent Registry answered HTTP ${r.status}: ${typeof j === 'string' ? j.slice(0, 120) : (j.message ?? '')}`.trim());
+    first ??= new Error(`the Agent Registry answered HTTP ${r.status}: ${typeof j === 'string' ? j.slice(0, 120) : (j.message ?? '')}`.trim());
   }
-  throw (last ?? new Error('the Agent Registry was not reachable'));
+  throw (first ?? new Error('the Agent Registry was not reachable'));
 }
 

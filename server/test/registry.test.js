@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import https from 'node:https';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { listKeys } from '../src/registry.js';
@@ -16,7 +16,9 @@ const SECRET_KEY = 'vk-this-value-must-never-leave-the-module';
 function selfSigned() {
   const dir = mkdtempSync(path.join(tmpdir(), 'ma-registry-'));
   execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=local.procyon.ai', '-keyout', path.join(dir, 'k.pem'), '-out', path.join(dir, 'c.pem')], { stdio: 'ignore' });
-  return { key: readFileSync(path.join(dir, 'k.pem')), cert: readFileSync(path.join(dir, 'c.pem')) };
+  const out = { key: readFileSync(path.join(dir, 'k.pem')), cert: readFileSync(path.join(dir, 'c.pem')) };
+  rmSync(dir, { recursive: true, force: true });
+  return out;
 }
 
 async function withConsole(fn) {
@@ -46,4 +48,9 @@ test('MA5 registry read: names the console (SNI + Host) and uses the list path; 
     assert.equal(seen[0].url, `/api/${TENANT}/v1/agentaccesskeys?ObjectMeta.Namespace=default`);
     assert.match(seen[0].host, /^local\.procyon\.ai:\d+$/);
   });
+});
+
+test('MA5 registry read: when every host fails, the first host\'s error is the one reported (the fallback must not mask it)', async () => {
+  // Port 1 on loopback refuses; the fallback host (host.docker.internal) fails differently (or not at all on a Docker-less box).
+  await assert.rejects(() => listKeys({ base: 'https://127.0.0.1:1', tenant: TENANT }), /ECONNREFUSED/);
 });
