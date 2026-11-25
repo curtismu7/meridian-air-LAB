@@ -8,6 +8,9 @@ Usage: python3 take.py <work_dir>
   work_dir gets: sample.mp4 (SAMPLE=1) or take.mp4 (HEADLESS_REAL=1), take.log, result.json
 Two cuts (owner, 2026-11-25), both on the Movie reel page (it reads easier than the sequence diagram):
   CUT=overview (default)  the scene tour: intro slide, the hop list, the reel
+  CUT=stills              the detail walk-through as STILLS (owner, 2026-11-25, hybrid): the same walk, but every caption and slide is captured as a screenshot of one
+                          real run and held for the same time; the first part (opening slide, sign-in, the first scene's run) stays a short LIVE clip.
+                          Output detail-stills.mp4. A scene is re-made by re-running with SCENES_ONLY, no long real-time recording.
   CUT=detail              the walk-through: per scene, click every reel frame, scroll to its detail and explain it, with the fields that matter highlighted
                           (output detail.mp4 / detail-sample.mp4; SCENES_ONLY=MA1,MA4 limits it)
 """
@@ -33,9 +36,10 @@ _prof = PROFILES[PROFILE_NAME]
 VW, VH = (int(os.environ.get("VW", 0)) or _prof["viewport"][0]), (int(os.environ.get("VH", 0)) or _prof["viewport"][1])
 SCALE = float(os.environ.get("SCALE", _prof["scale"]))
 CUT = os.environ.get("CUT", "overview")
-if CUT not in ("overview", "detail"): raise SystemExit(f"take.py: CUT must be overview or detail, not {CUT!r}")
-DETAIL = CUT == "detail"
-OUT = WORK / (("detail" if DETAIL else "take") + ".mp4" if HEADLESS_REAL else ("detail-sample.mp4" if DETAIL else "sample.mp4"))
+if CUT not in ("overview", "detail", "stills"): raise SystemExit(f"take.py: CUT must be overview, detail or stills, not {CUT!r}")
+STILLS = CUT == "stills"
+DETAIL = CUT in ("detail", "stills")
+OUT = WORK / ("detail-stills.mp4" if STILLS else (("detail" if DETAIL else "take") + ".mp4" if HEADLESS_REAL else ("detail-sample.mp4" if DETAIL else "sample.mp4")))
 SCENES = ["MA1", "MA2", "MA3", "MA4", "MA5", "MA6", "MA7", "MA8", "MA9", "MA10", "MA11"]   # the full catalog, one intro slide before each (owner, 2026-11-25)
 if os.environ.get("SCENES_ONLY"): SCENES = [u.strip() for u in os.environ["SCENES_ONLY"].split(",") if u.strip() in SCENES]
 TOTAL = None   # set in main(): sign-in + 2 captions per scene (hops, reel) (overview cut)
@@ -75,6 +79,21 @@ def check_privilege_console():
     except (OSError, http.client.HTTPException) as e:
         raise SystemExit(f"take.py: MA5 needs the PingOne Privilege desktop app open and signed in: its console at {host}:{port} is not answering ({type(e).__name__}). "
                          "Open the app, wait for it to sign in, then run again (SKIP_CONSOLE_CHECK=1 records anyway, and MA5 will fail Real).")
+
+def assemble_stills(raw, live_start, live_end, stills, out):
+    """The stills cut's video: the live opening (raw from live_start to live_end), then each still held for its time, joined. One encoding setting for both parts
+    (size, 25 fps, yuv420p), so the join needs no re-timing."""
+    live_clip, stills_clip, lst = WORK / "stills-live.mp4", WORK / "stills-only.mp4", WORK / "stills.ffconcat"
+    enc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", "25"]
+    vf = f"scale={VW}:{VH}:flags=lanczos,fps=25,format=yuv420p"
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", str(live_start), "-t", str(round(live_end - live_start, 2)), "-i", str(raw), "-vf", vf, *enc, str(live_clip)], check=True)
+    lines = ["ffconcat version 1.0"]
+    for png, secs in stills: lines += [f"file '{png}'", f"duration {secs:.2f}"]
+    lines.append(f"file '{stills[-1][0]}'")   # the concat demuxer needs the last file repeated for its duration to count
+    lst.write_text("\n".join(lines) + "\n")
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-vf", vf, *enc, str(stills_clip)], check=True)
+    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(live_clip), "-i", str(stills_clip), "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]", "-map", "[v]", *enc, str(out)], check=True)
+    for f in (live_clip, stills_clip, lst): f.unlink(missing_ok=True)
 
 def main():
     global OPENING_SLIDE, CLOSING_SLIDE, STEPS, SLIDES, TOTAL
@@ -158,6 +177,15 @@ def main():
             page.select_option('[data-testid="mode-select"]', "mock"); page.wait_for_timeout(800)
             log("switched to mock for the sample cut")
         count = {"n": 0}
+        stills = []                       # (png, seconds to hold it) in order, the stills cut only
+        live = {"on": STILLS, "end": None}   # the stills cut records the opening live (until the first scene's walk starts), then captures stills
+        stills_dir = WORK / "stills"
+        def still(secs):
+            """The stills cut: one screenshot of what the live take would have shown, held for the time the live take would have held it."""
+            stills_dir.mkdir(parents=True, exist_ok=True)
+            page.wait_for_timeout(250)   # let the overlay finish painting
+            png = stills_dir / f"{len(stills) + 1:04d}.png"
+            page.screenshot(path=str(png)); stills.append((png, float(secs)))
         TOTAL = 1 + 2 * len(SCENES)   # captions only (slides are not counted): sign-in, then per scene the hop list and the reel
         shots = os.environ.get("REHEARSE_SHOTS")
 
@@ -177,7 +205,9 @@ def main():
             count["n"] += 1
             page.evaluate("o => window.__cm.cap(o)", dict(n=n if n is not None else count["n"], total=total if total is not None else TOTAL, title=title, text=text, target=target, lines=lines, prefer=prefer))
             snap(f"step-{count['n']:02d}")
-            page.wait_for_timeout(int((secs if secs is not None else hold_bubble(page, text, lines)) * 1000 * (0.04 if REHEARSE else 1)))
+            hold_s = secs if secs is not None else hold_bubble(page, text, lines)
+            if STILLS and not live["on"]: still(hold_s)   # captured, not waited out
+            else: page.wait_for_timeout(int(hold_s * 1000 * (0.04 if REHEARSE else 1)))
             page.evaluate("() => window.__cm.clear()")
 
         def show_slide(cfg, name="slide"):
@@ -185,11 +215,15 @@ def main():
             if clip["first"] is None: clip["first"] = time.monotonic() - clock0
             page.evaluate("o => window.__cm.slide(o)", payload)
             snap(name)
-            total_ms = int(_hold_slide(page, payload) * 1000 * (0.04 if REHEARSE else 1))   # the shared formula (no slide is held longer than 10 s)
-            pre_ms = min(6000, int(total_ms * 0.45))
-            page.wait_for_timeout(pre_ms)
-            page.evaluate("() => window.__cm.scrollSlide()")   # the shared overlay scrolls a tall card to its verdict
-            page.wait_for_timeout(max(0, total_ms - pre_ms))
+            slide_s = _hold_slide(page, payload)   # the shared formula (no slide is held longer than 10 s)
+            if STILLS and not live["on"]:
+                still(slide_s)
+            else:
+                total_ms = int(slide_s * 1000 * (0.04 if REHEARSE else 1))
+                pre_ms = min(6000, int(total_ms * 0.45))
+                page.wait_for_timeout(pre_ms)
+                page.evaluate("() => window.__cm.scrollSlide()")   # the shared overlay scrolls a tall card to its verdict
+                page.wait_for_timeout(max(0, total_ms - pre_ms))
             page.evaluate("() => window.__cm.clear()")
             if name == "closing": clip["last"] = time.monotonic() - clock0
 
@@ -200,6 +234,8 @@ def main():
             frames = page.eval_on_selector_all('[data-testid^="frame-"]', "els => els.map(e => e.dataset.testid)")
             page.wait_for_timeout(600)
             for i, fid in enumerate(frames, 1):
+                if STILLS and live["on"]:   # the live opening ends here: from the first explained step on, the video is stills
+                    live["end"] = time.monotonic() - clock0; live["on"] = False; log(f"live clip ends at {live['end']:.1f}s; stills from here")
                 page.evaluate("() => window.scrollTo(0, 0)")
                 page.click(f'[data-testid="{fid}"]')
                 page.wait_for_selector('[data-testid="step-detail"]', timeout=10000)
@@ -336,7 +372,17 @@ def main():
         result["clip"] = clip_window(clip["first"], clip["last"]); log("clip window (s):", result["clip"])
         video = page.video
         ctx.close()
-        if video:
+        if video and STILLS:
+            path = video.path()
+            if path and Path(path).exists() and stills and live["end"] is not None:
+                raw = WORK / "stills-raw.mp4"; Path(path).replace(raw)
+                assemble_stills(raw, clip["first"] + 0.05, live["end"], stills, OUT)
+                raw.unlink(missing_ok=True)
+                result["stills"] = len(stills); result["live_s"] = round(live["end"] - clip["first"], 1); result["stills_s"] = round(sum(sec for _, sec in stills), 1)
+                result["ok"] = result["ok"] and OUT.exists(); log("video:", OUT, f"({result['live_s']}s live + {result['stills_s']}s of {len(stills)} stills)")
+            else:
+                result["ok"] = False; log("WARNING: no stills were captured, or the live clip never ended: no video")
+        elif video:
             path = video.path()
             if path and Path(path).exists():
                 out = WORK / ("sample-raw.mp4" if SAMPLE else "take-raw.mp4")
