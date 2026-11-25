@@ -41,7 +41,7 @@ test('story: the bubbles come in the same order as in take.py, and the scene ord
   // The script's scene bubbles, in the video's tour order.
   const sceneBubbles = STEPS.filter((s) => s.type === 'bubble' && /^ma\d+$/.test(s.key)).map((s) => s.key);
   assert.deepEqual(sceneBubbles, scenes.map((s) => s.toLowerCase()));
-  assert.deepEqual(scenes, ['MA1', 'MA2', 'MA7', 'MA5', 'MA6', 'MA4', 'MA9']);
+  assert.deepEqual(scenes, ['MA1', 'MA2', 'MA3', 'MA4', 'MA5', 'MA6', 'MA7', 'MA8', 'MA9', 'MA10', 'MA11']);
 });
 
 test('story (rule 29): the first page the viewer sees names the demo', () => {

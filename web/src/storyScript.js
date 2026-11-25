@@ -10,7 +10,7 @@
 // Hold times for Play for me are not here: they come from the wording and the shared hold.js (the video's own formulas).
 
 // The video's tour order (take.py SCENES): the scenes it runs, each followed by its evidence bubble.
-const SCENES = ['MA1', 'MA2', 'MA7', 'MA5', 'MA6', 'MA4', 'MA9'];
+const SCENES = ['MA1', 'MA2', 'MA3', 'MA4', 'MA5', 'MA6', 'MA7', 'MA8', 'MA9', 'MA10', 'MA11'];
 
 export const STEPS = [
   { key: 'opening', type: 'slide', trigger: 'load' },
@@ -28,8 +28,8 @@ export const STEPS = [
 
 // Bubbles only Story has (the video has no such scene): the per-scene evidence bubbles, numbered with the rest.
 export const STORY_ONLY = SCENES.map((uc) => `${uc.toLowerCase()}_evidence`);
-// Wording only the video uses: none today.
-export const VIDEO_ONLY = [];
+// Wording only the video uses: the per-scene intro slides (title, products used, value), shown by take.py before each scene. The demo's story does not show them.
+export const VIDEO_ONLY = SCENES.map((uc) => uc.toLowerCase());
 
 // What the parity test hands to captions.js parity(): the caption keys this script needs.
 export function scriptKeys() {
