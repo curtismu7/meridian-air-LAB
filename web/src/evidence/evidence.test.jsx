@@ -304,6 +304,18 @@ describe("step detail", () => {
   });
 });
 
+describe("step detail: what to look at", () => {
+  test("a hop with a key fact shows it as one colored Look at line; a hop whose fact is only 'done' shows none", () => {
+    const withFact = UC1_RUN.map((h) => (h.n === 6 ? { ...h, fact: "tools permitted: 3" } : h));
+    const { unmount } = render(<StepDetailPanel hops={withFact} selected={6} onSelect={() => {}} />);
+    expect(screen.getByTestId("sdp-notice").textContent).toBe("Look at tools permitted: 3");
+    unmount();
+    const bare = UC1_RUN.map((h) => (h.n === 6 ? { ...h, fact: "done" } : h));
+    render(<StepDetailPanel hops={bare} selected={6} onSelect={() => {}} />);
+    expect(screen.queryByTestId("sdp-notice")).toBeNull();
+  });
+});
+
 describe("actor card", () => {
   test("an actor no table describes still gets a card with its steps", () => {
     const hops = [{ ...UC1_RUN[0], to: "lab-widget" }];
