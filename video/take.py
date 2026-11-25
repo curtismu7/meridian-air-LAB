@@ -243,6 +243,17 @@ def main():
                 raise RuntimeError(f"{uc}: the run never started")
             page.wait_for_timeout(int((wait_s if not REHEARSE else 0.5) * 1000))
             ev = page.inner_text('[data-testid="evidence-count"]').strip()
+            # A Real run that shows "+N not in this run" lost a hop to a transient failure (the SE gateway, or the registry, did not answer in time under
+            # the recorder's load): run the scene again, up to twice, so the take shows a complete run. Mock always lists the hops it does not run, so
+            # this is Real only. Every retry is logged and counted in result.json (a take that never recovers still records its blemish there).
+            tries = 0
+            while HEADLESS_REAL and " REAL" in ev and "not in this run" in ev and tries < 2:
+                tries += 1
+                log(f"{uc}: incomplete Real run ({ev!r}); retry {tries}")
+                page.select_option('[data-testid="wtt-select"]', uc)
+                page.wait_for_timeout(int((wait_s if not REHEARSE else 0.5) * 1000))
+                ev = page.inner_text('[data-testid="evidence-count"]').strip()
+            if tries: result.setdefault("retries", {})[uc] = tries
             log(f"{uc}: evidence={ev!r}")
             result[f"{uc}_evidence"] = ev
             # The details the owner asked the video to show (2026-11-25): open every hop of this run so the
@@ -297,7 +308,9 @@ def main():
             except Exception: leaks = -1
             result["mask_leaks"] = leaks; log("on-screen mask check: leaks =", leaks)
             if leaks != 0: log("WARNING: real values reached the page (or the mask did not load): do not publish this take")
-        result["ok"] = result.get("mask_leaks", 0) == 0   # a take that leaked is never ok
+        blemished = [k[:-9] for k, v in result.items() if k.endswith("_evidence") and HEADLESS_REAL and " REAL" in v and "not in this run" in v]
+        if blemished: log("WARNING: scenes that still show hops not run after the retries:", blemished); result["blemished"] = blemished
+        result["ok"] = result.get("mask_leaks", 0) == 0 and not blemished   # a take that leaked, or still shows a failed hop, is never ok
         result["clip"] = clip_window(clip["first"], clip["last"]); log("clip window (s):", result["clip"])
         video = page.video
         ctx.close()
