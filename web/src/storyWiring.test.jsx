@@ -4,7 +4,7 @@ import { describe, expect, test, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createHost, buildSteps, firstSentence } from "./storyWiring.js";
-import { STEPS, scriptKeys } from "./storyScript.js";
+import { STEPS, VIDEO_ONLY, scriptKeys } from "./storyScript.js";
 import { parity, parseCaptions } from "../../server/src/story/captions.js";
 
 const disposables = [];
@@ -116,7 +116,7 @@ describe("storyWiring steps", () => {
   test("the script and the lab's captions.md agree (parity, re-checked on the web side)", () => {
     const raw = readFileSync(`${process.cwd().replace(/\/web$/, "")}/video/captions.md`, "utf8");
     const captions = parseCaptions(raw);
-    expect(parity(captions, scriptKeys(), { allowUnused: [] })).toEqual([]);
+    expect(parity(captions, scriptKeys(), { allowUnused: VIDEO_ONLY })).toEqual([]);
   });
 
   test("firstSentence cuts at the first full stop and never mid-word", () => {

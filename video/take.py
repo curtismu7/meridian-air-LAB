@@ -29,7 +29,7 @@ _prof = PROFILES[PROFILE_NAME]
 VW, VH = (int(os.environ.get("VW", 0)) or _prof["viewport"][0]), (int(os.environ.get("VH", 0)) or _prof["viewport"][1])
 SCALE = float(os.environ.get("SCALE", _prof["scale"]))
 OUT = WORK / ("take.mp4" if HEADLESS_REAL else "sample.mp4")
-SCENES = ["MA1", "MA2", "MA7", "MA5", "MA6", "MA4", "MA9"]   # the sample's tour order
+SCENES = ["MA1", "MA2", "MA3", "MA4", "MA5", "MA6", "MA7", "MA8", "MA9", "MA10", "MA11"]   # the full catalog, one intro slide before each (owner, 2026-11-25)
 TOTAL = None   # set in main(): sign-in + 3 captions per scene (hops, sequence, reel) + the closing hop-line
 
 def log(*a):
@@ -130,7 +130,7 @@ def main():
             page.select_option('[data-testid="mode-select"]', "mock"); page.wait_for_timeout(800)
             log("switched to mock for the sample cut")
         count = {"n": 0}
-        TOTAL = 2 + 3 * len(SCENES)   # sign-in, then per scene: the hops bubble, the sequence shot and the reel shot
+        TOTAL = 2 + 4 * len(SCENES)   # sign-in, then per scene: the intro slide, the hops bubble, the sequence shot and the reel shot
         shots = os.environ.get("REHEARSE_SHOTS")
 
         def snap(name):
@@ -139,9 +139,10 @@ def main():
                 page.screenshot(path=str(Path(shots) / f"{name}.png"))
 
         def bubble(key, target=None, lines=None, secs=None, prefer=None):
-            """One numbered caption, drawn by the shared overlay and held for the shared formula."""
+            """One numbered caption, drawn by the shared overlay and held for the shared formula. {hops} in the wording is the page
+            engine's live fill (Story mode); the video shows the hop lines beside the text instead, so the placeholder is dropped here."""
             st = STEPS[key]
-            caption(st["title"], st["text"], target=target, lines=lines, secs=secs, prefer=prefer)
+            caption(st["title"], st["text"].replace(" {hops}", ""), target=target, lines=lines, secs=secs, prefer=prefer)
 
         def caption(title, text, target=None, lines=None, secs=None, prefer=None):
             """A caption with wording given here (the per-scene diagram shots), not from captions.md."""
@@ -221,6 +222,9 @@ def main():
             page.wait_for_selector("text=Signed in", timeout=30000)
         bubble("signin", target='[data-testid="mode-select"]', prefer="below")
         for uc in SCENES:
+            slide = SLIDES.get(uc.lower())
+            if slide:
+                show_slide(slide, name=f"slide-{uc.lower()}")   # the intro: title, products used, the value (owner: a clear slide between use cases)
             run_scene(uc, uc.lower())
         bubble("hops", target='[data-testid="evidence-count"]', prefer="below")
         show_slide(CLOSING_SLIDE, name="closing")
