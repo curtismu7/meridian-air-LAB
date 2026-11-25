@@ -72,15 +72,19 @@
 .sessions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .sessions__item { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; padding: 4px 8px; min-height: 36px; font-size: 12px; text-align: left; }
 @media (min-width: 900px) {
-  /* three children when the toggle is shown: sidebar | toggle | work | control-plane rail */
-  .agno:has(.setup-toggle):has(.cprail) { grid-template-columns: var(--setup-w, 270px) auto 6px minmax(0, 1fr) 6px var(--cp-w, 250px); }
-  .agno:has(.setup-toggle):not(:has(.cprail)) { grid-template-columns: var(--setup-w, 270px) auto 6px minmax(0, 1fr); }
-  .agno:not(:has(.setup-toggle)):has(.cprail) { grid-template-columns: var(--setup-w, 270px) 6px minmax(0, 1fr) 6px var(--cp-w, 250px); }
-  .agno:not(:has(.setup-toggle)):not(:has(.cprail)) { grid-template-columns: var(--setup-w, 270px) 6px minmax(0, 1fr); }
+  /* the shared Rail wrap (sidebar + its edge toggle) | setup handle | work | control-plane rail. `auto`: the wrap sizes its own column, so collapsed it is
+     just the toggle strip and the work area takes the space (rail.css has the recipe). */
+  .agno:has(.rail-wrap):has(.cprail) { grid-template-columns: auto 6px minmax(0, 1fr) 6px var(--cp-w, 250px); }
+  .agno:has(.rail-wrap):not(:has(.cprail)) { grid-template-columns: auto 6px minmax(0, 1fr); }
   .col-handle { width: 6px; min-height: 4rem; border-radius: 3px; background: var(--border); cursor: col-resize; touch-action: none; }
   .col-handle:hover { background: var(--muted); }
   .setup { position: sticky; top: 8px; max-height: max(420px, calc(100vh - 196px)); overflow-y: auto; }
+  .rail .setup { width: var(--setup-w, 270px); }   /* the width the drag handle sets */
+  .agno > .rail-wrap { align-self: stretch; }        /* so the sticky setup panel has the whole row to travel in */
 }
+/* the setup handle belongs to an open sidebar only (collapsed, its cell stays but it is invisible) */
+.rail-wrap--collapsed + .col-handle { visibility: hidden; pointer-events: none; }
+@media (max-width: 899px) { .agno > .rail-wrap:not(.rail-wrap--collapsed) { width: 100%; } }
 
 /* ===== the Agentic Trust Control Plane rail (the approved mock's right column) ===== */
 .cprail { display: grid; gap: 8px; align-content: start; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -95,23 +99,6 @@
 .cprail__layer[data-hot]::before { background: var(--accent); }
 .cprail__talk { margin: 0; font-size: 12.5px; color: var(--text-body); }
 @media (max-width: 1279px) { .agno:has(.cprail) .cprail { grid-column: 1 / -1; } } /* narrow: the rail flows under, still readable */
-/* sidebar collapsed: chat and evidence get the room (the whole screen minus the rail); the toggle floats at the panel's old edge.
-   These must beat the :has(.setup-toggle) templates below — the toggle still renders when collapsed — hence data-sidebar on the same element. */
-.agno[data-sidebar="collapsed"] { grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 900px) {
-  .agno[data-sidebar="collapsed"]:has(.cprail) { grid-template-columns: minmax(0, 1fr) 250px; }
-  .agno[data-sidebar="collapsed"]:not(:has(.cprail)) { grid-template-columns: minmax(0, 1fr); }
-}
-.setup-toggle {
-  align-self: start; position: sticky; top: 8px; width: 26px; height: 52px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-body);
-  cursor: pointer; font-size: 12px; padding: 0; z-index: 2;
-}
-.setup-toggle:hover { border-color: var(--accent); color: var(--accent); }
-.setup-toggle[aria-expanded="false"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); }
-.setup-toggle[aria-expanded="false"]:hover { background: var(--accent-deep); color: var(--on-accent); }
-.agno[data-sidebar="collapsed"] .setup-toggle { position: fixed; left: 8px; top: 50%; transform: translateY(-50%); border-radius: 0 8px 8px 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .app[data-presenter] .agno { grid-template-columns: minmax(0, 1fr); }
 

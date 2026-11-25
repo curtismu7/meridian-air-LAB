@@ -114,12 +114,13 @@ def main():
         page.wait_for_selector('[data-testid="mode-select"]')
         if page.locator('[data-testid="theme-select"]').count():
             page.select_option('[data-testid="theme-select"]', THEME)
-        # The Agent detail tab first: the sidebar-toggle button lives there (the Chat tab has none).
+        # The Agent detail tab first: the setup sidebar (the shared Rail, with its edge toggle) lives there, the Chat tab has none.
         page.evaluate("() => { document.querySelector('[data-testid=\"nav-agent\"]')?.click(); }")
         page.wait_for_timeout(600)
-        # Collapse the setup sidebar (owner, 2026-11-25): chat and evidence get the room before anything is recorded.
-        if page.locator('[data-testid="sidebar-toggle"][aria-expanded="true"]').count():
-            page.click('[data-testid="sidebar-toggle"]')
+        # The setup sidebar opens collapsed (owner, 2026-11-25), so chat and evidence have the room. A fresh recording browser has no saved choice;
+        # if one ever left it open, collapse it before anything is recorded.
+        if page.locator('[data-testid="rail-toggle"][aria-expanded="true"]').count():
+            page.click('[data-testid="rail-toggle"]')
             page.wait_for_timeout(400)
             log("setup sidebar collapsed")
         page.wait_for_timeout(1500)
