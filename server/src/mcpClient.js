@@ -7,6 +7,12 @@ import { isLoopbackHost } from './safety.js';
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
 export const GATEWAY_TIMEOUT_MS = 10_000;
 export const GATEWAY_MAX_BYTES = 256 * 1024;
+// A gateway that does not answer (no connection, a timeout, 502/503/504) is retried for the READ-ONLY setup calls only: initialize, the initialized
+// notification and tools/list change nothing, so sending them again is safe. A tools/call is NEVER re-sent (a booking or a cancellation could happen twice).
+// Two pauses = up to three attempts, and no new attempt starts after the budget is spent, so a slow gateway cannot hold a run for minutes.
+export const RETRYABLE_METHODS = new Set(['initialize', 'notifications/initialized', 'tools/list']);
+export const RETRY_PAUSES_MS = [500, 1000];
+export const RETRY_BUDGET_MS = 22_000;
 // Never sent (lower-case). These let a trusted service assert things a caller must not assert about itself.
 export const TRUSTED_HEADERS = ['x-internal-gateway-secret', 'x-authz-simulated', 'x-act-client-id', 'x-may-act-sub', 'x-demo-force-actor'];
 // The only header names this client may send.
@@ -99,7 +105,7 @@ export function parseAuditTrail(value) {
 }
 
 // The gateway's HTTP answer in the lab's words. 403 = a policy DENY, 401 = a token problem, 428 = a hold for a person, 502/503/504 or no answer = SE
-// is down or scaled down. Never retried.
+// is down or scaled down. A tools/call is never retried; the read-only setup calls are (RETRYABLE_METHODS).
 export function classify(status) {
   if (status === 0 || status === 502 || status === 503 || status === 504) return 'unreachable';
   if (status === 401) return 'token';
@@ -110,13 +116,13 @@ export function classify(status) {
 }
 
 // One gateway session: initialize, then the notification the protocol asks for, then tools/list and tools/call with the session id the gateway gave.
-export function createGatewaySession({ url, token, vertical, nextTraceparent, fetchImpl = (...a) => globalThis.fetch(...a), timeoutMs = GATEWAY_TIMEOUT_MS, maxBytes = GATEWAY_MAX_BYTES }) {
+export function createGatewaySession({ url, token, vertical, nextTraceparent, fetchImpl = (...a) => globalThis.fetch(...a), timeoutMs = GATEWAY_TIMEOUT_MS, maxBytes = GATEWAY_MAX_BYTES, retryPausesMs = RETRY_PAUSES_MS, retryBudgetMs = RETRY_BUDGET_MS }) {
   const problem = gatewayUrlProblem(url);
   if (problem) throw new GatewayRefused('bad_url', problem);
   const target = new URL(url).toString();
   let sessionId = null; let protocol = null; let seq = 0;
 
-  async function send(method, params, { notification = false } = {}) {
+  async function attemptOnce(method, params, { notification = false } = {}) {
     const traceparent = nextTraceparent();
     const id = notification ? undefined : ++seq;
     const headers = gatewayHeaders({ token, traceparent, vertical, sessionId, protocol });
@@ -138,6 +144,17 @@ export function createGatewaySession({ url, token, vertical, nextTraceparent, fe
     if (method === 'initialize' && rpc?.result && typeof rpc.result.protocolVersion === 'string' && /^[0-9-]{4,20}$/.test(rpc.result.protocolVersion)) protocol = rpc.result.protocolVersion;
     // A redirect is never followed: it is shown as an answer of its own ("other").
     return { method, traceparent, status: response.status, kind: response.status >= 300 && response.status < 400 ? 'other' : classify(response.status), headers: shown, rpc, truncated: read.truncated, sentHeaders: Object.keys(headers), sent };
+  }
+
+  // One call, with the safe retry above. `attempts` is set on the answer only when more than one attempt was needed.
+  async function send(method, params, opts = {}) {
+    const started = Date.now();
+    let answer = await attemptOnce(method, params, opts); let attempts = 1;
+    while (RETRYABLE_METHODS.has(method) && answer.kind === 'unreachable' && attempts <= retryPausesMs.length && Date.now() - started < retryBudgetMs) {
+      await new Promise((resolve) => setTimeout(resolve, retryPausesMs[attempts - 1]));
+      answer = await attemptOnce(method, params, opts); attempts += 1;
+    }
+    return attempts > 1 ? { ...answer, attempts } : answer;
   }
 
   return {

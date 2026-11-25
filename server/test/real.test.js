@@ -118,7 +118,7 @@ test('no trusted-caller header is ever sent, and the client refuses to build one
   assert.deepEqual(Object.keys(gatewayHeaders({ token: 't', traceparent: TP, vertical: 'banking' })).sort(), ['accept', 'authorization', 'content-type', 'traceparent', 'x-active-vertical', 'x-token-validation']);
 });
 
-test('error mapping: 403 DENY with the audit trail, 401 token problem with WWW-Authenticate, 428 held (approval simulated), 503 SE down, tool error, tool not listed; never retried', async () => {
+test('error mapping: 403 DENY with the audit trail, 401 token problem with WWW-Authenticate, 428 held (approval simulated), 503 SE down, tool error, tool not listed; only an outage is retried (initialize, three attempts)', async () => {
   const cases = [
     ['deny', 'REAL_DENY', 'Authorize', /denied this request \(HTTP 403.*decision DENY/],
     ['token', 'REAL_TOKEN_PROBLEM', 'Gateway', /HTTP 401.*invalid_token/],
@@ -144,12 +144,12 @@ test('error mapping: 403 DENY with the audit trail, 401 token problem with WWW-A
       if (behaviour === 'token') assert.match(x.hops.find((h) => h.kind === 'gateway-check').note, /WWW-Authenticate: Bearer error="invalid_token"/);
       if (behaviour === 'hold') { assert.equal(x.reply.approval.head, 'Held for approval (REAL)'); assert.match(x.reply.approval.body, /approval is simulated/); assert.equal(x.hops.find((h) => h.kind === 'tool-held').verdict, 'held'); }
       const calls = gw.seen.filter((c) => c.rpc.method === 'initialize').length;
-      assert.equal(calls, 1, `${behaviour}: initialize once, no retry loop`);
+      assert.equal(calls, behaviour === 'down' ? 3 : 1, `${behaviour}: ${behaviour === 'down' ? 'an outage: initialize is tried three times, then SE is reported down' : 'an answer (not an outage): initialize once, no retry loop'}`);
     }, { gateway: behaviour });
   }
 });
 
-test('a gateway that does not answer at all (connect error) is SE down, with one attempt', async () => {
+test('a gateway that does not answer at all (connect error) is SE down (after the safe retries)', async () => {
   const p1 = await startFakePingOne();
   const real = createReal({ config: realConfig(fullSettingsFor('http://127.0.0.1:9/mcp'), { MA_LIVE_TEST_BASE: p1.base }), wanted: true });
   try {
