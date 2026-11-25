@@ -38,7 +38,7 @@ DETAIL = CUT == "detail"
 OUT = WORK / (("detail" if DETAIL else "take") + ".mp4" if HEADLESS_REAL else ("detail-sample.mp4" if DETAIL else "sample.mp4"))
 SCENES = ["MA1", "MA2", "MA3", "MA4", "MA5", "MA6", "MA7", "MA8", "MA9", "MA10", "MA11"]   # the full catalog, one intro slide before each (owner, 2026-11-25)
 if os.environ.get("SCENES_ONLY"): SCENES = [u.strip() for u in os.environ["SCENES_ONLY"].split(",") if u.strip() in SCENES]
-TOTAL = None   # set in main(): sign-in + 2 captions per scene (hops, reel) + the closing hop-line (overview cut)
+TOTAL = None   # set in main(): sign-in + 2 captions per scene (hops, reel) (overview cut)
 
 def log(*a):
     WORK.mkdir(parents=True, exist_ok=True)
@@ -138,7 +138,7 @@ def main():
             page.select_option('[data-testid="mode-select"]', "mock"); page.wait_for_timeout(800)
             log("switched to mock for the sample cut")
         count = {"n": 0}
-        TOTAL = 2 + 3 * len(SCENES)   # sign-in, then per scene: the intro slide, the hops bubble and the reel shot
+        TOTAL = 1 + 2 * len(SCENES)   # captions only (slides are not counted): sign-in, then per scene the hop list and the reel
         shots = os.environ.get("REHEARSE_SHOTS")
 
         def snap(name):
@@ -290,7 +290,6 @@ def main():
             if slide:
                 show_slide(slide, name=f"slide-{uc.lower()}")   # the intro: title, products used, the value (owner: a clear slide between use cases)
             run_scene(uc, uc.lower())
-        if not DETAIL: bubble("hops", target='[data-testid="evidence-count"]', prefer="below")
         show_slide(CLOSING_SLIDE, name="closing")
         page.wait_for_timeout(200 if REHEARSE else 1500)
         if MASK_SCRIPT:   # a public video: no real value may have been on the page at ANY point of this take
