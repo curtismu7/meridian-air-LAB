@@ -61,8 +61,8 @@ test('the full chain: pi.flow sign-in, agent token, TWO token exchanges (act = a
     assert.equal(x.kind, 'real'); assert.equal(x.outcome, 'REAL_PERMIT'); assert.equal(x.reply.who, 'Agent'); assert.match(x.reply.text, /balance 1200\.5/);
     assert.deepEqual(x.hops.map((h) => h.kind), ['sign-in', 'actor-token', 'token-exchange', 'token-exchange', 'gateway-check', 'authorize-decision', 'tool-dispatched', 'api-call', 'agent-reply']);
     assert.deepEqual(x.hops.slice(2, 4).map((h) => h.title), ['Exchange 1: act = agent', 'Exchange 2: for the gateway'], 'the two exchanges are told apart');
-    assert.match(x.hops[2].label, /^Token exchange 1 \[REAL\]: act = agent/); assert.match(x.hops[3].label, /^Token exchange 2 \[REAL\]: for the gateway/);
-    assert.ok(x.hops.every((h) => h.source === 'real' && h.mock === false && /\[REAL\]/.test(h.label)), 'every hop ran for real and says so');
+    assert.match(x.hops[2].label, /^Token exchange 1: act = agent/); assert.match(x.hops[3].label, /^Token exchange 2: for the gateway/);
+    assert.ok(x.hops.every((h) => h.source === 'real' && h.mock === false && !/\[(REAL|MOCK|NOT RUN)\]/.test(h.label)), 'every hop ran for real, and a real hop carries no marker in its label (only MOCK and NOT RUN are marked)');
     assert.deepEqual([x.hops[2].response.body.act_claim, x.hops[3].response.body.act_claim], [{ sub: AGENT_CLIENT_ID }, { sub: AGENT_CLIENT_ID }], 'both exchange hops show the act they got');
     assert.equal(x.traceparent.split('-')[1], TP.split('-')[1]);
     // The Tokens tab: the user, the agent (actor), exchange 1 and the delegated (exchange 2) token, each raw with its decoded claims.
@@ -136,7 +136,7 @@ test('error mapping: 403 DENY with the audit trail, 401 token problem with WWW-A
       if (text) assert.match(x.reply.text, text, behaviour);
       assert.equal(x.hops.length, 9, `${behaviour}: always the nine hops`);
       assert.ok(x.hops.every((h) => (h.source === 'real') === (h.verdict !== 'skip')), `${behaviour}: a hop that did not run says NOT RUN, never REAL`);
-      assert.ok(x.hops.every((h) => (h.source === 'not-run' ? /\[NOT RUN\]$/ : /\[REAL\]/).test(h.label)), `${behaviour}: the label says what the source says`);
+      assert.ok(x.hops.every((h) => (h.source === 'not-run' ? /\[NOT RUN\]$/ : /^(?!.*\[(REAL|MOCK|NOT RUN)\])/).test(h.label)), `${behaviour}: the label says what the source says`);
       if (behaviour === 'deny') {
         const d = x.hops.find((h) => h.kind === 'authorize-decision');
         assert.equal(d.decision.outcome, 'DENY'); assert.deepEqual(d.response['x-gw-audit-trail'], JSON.parse(AUDIT_TRAIL));
@@ -228,7 +228,7 @@ test('act is required: a token without act after exchange 2 stops the run BEFORE
     assert.deepEqual(x.hops.map((h) => h.source), ['real', 'real', 'real', 'real', 'not-run', 'not-run', 'not-run', 'not-run', 'not-run']);
     assert.deepEqual(x.hops.slice(2, 4).map((h) => h.verdict), ['ok', 'deny']); assert.equal(x.hops[3].response.body.act_claim, 'ABSENT');
     assert.equal(x.tokens.length, 4); assert.deepEqual(x.tokens[2].claims.act, { sub: AGENT_CLIENT_ID }); assert.equal(x.tokens[3].claims.act, undefined);
-    assert.ok(x.hops.every((h) => (h.source === 'not-run' ? /\[NOT RUN\]$/ : /\[REAL\]/).test(h.label)));
+    assert.ok(x.hops.every((h) => (h.source === 'not-run' ? /\[NOT RUN\]$/ : /^(?!.*\[(REAL|MOCK|NOT RUN)\])/).test(h.label)));
     noRawTokens(x, 'no act after exchange 2');
   }, { setup: (p1) => { p1.state.resources.gateway.act = 'absent'; } });
   // (d) An act that names nobody (no sub) is no act: HasValidActorChain could not match it.
@@ -411,7 +411,7 @@ test('the old two-call path only while the new settings are absent, labelled ide
       assert.equal((await toReal(url)).status, 200);
       const r = await run(url, 'MA1', { vertical: 'banking' });
       assert.equal(r.body.run.kind, 'live'); assert.equal(r.body.run.real.level, 'idp-only'); assert.equal(fake.seen.length, 2);
-      assert.ok(r.body.run.hops.every((h) => h.source === 'real' && /identity provider only \[REAL\]/.test(h.label)));
+      assert.ok(r.body.run.hops.every((h) => h.source === 'real' && /identity provider only/.test(h.label) && !/\[REAL\]/.test(h.label)));
     }, { env: ENV, live, real: createReal({ missing: missingFull(settingsFor()), wanted: false }) });
     // One MA_* name set (the owner started the scripts): the old path is ignored, Real is unavailable until all are set.
     const partial = { ...settingsFor(), MA_USER_CLIENT_ID: 'u-1' };
