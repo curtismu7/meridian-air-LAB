@@ -187,7 +187,7 @@ export default function SequenceView({ hops = [], selected = null, onSelect }) {
               const x = colX(id);
               const a = actorOf(id);
               const box = (y, h, ty, small, where) => (
-                <g role="button" tabIndex={-1} className="sq-lbtn" aria-label={`${a.label} actor details (${where})`}
+                <g role="button" tabIndex={where === "top" ? 0 : -1} className="sq-lbtn" aria-label={`${a.label} actor details (${where})`}
                   {...(where === "top" ? { "data-testid": `actor-${id}`, "aria-pressed": actor === id } : {})} onClick={() => openActor(id)} onKeyDown={(e) => actorKey(e, id)}>
                   <rect className="sq-lbox" x={x - laneBox / 2} y={y} width={laneBox} height={h} rx="7" />
                   <text className={`sq-lt${small ? " sq-lt--sm" : ""}`} x={x} y={ty} textAnchor="middle">{a.label}</text>

@@ -82,7 +82,9 @@ const alternates = (base) => {
 };
 
 export async function listKeys({ base, tenant } = {}) {
-  let first = null;   // the FIRST host's failure is the real cause; a fallback host's refusal must not replace it
+  // A host that ANSWERED (an HTTP status) says more than one that could not be reached, so that error wins; otherwise the FIRST host's failure
+  // is reported (a fallback host's refusal must not replace it).
+  let first = null; let answered = null;
   for (const b of alternates(base)) {
     const session = crypto.randomUUID();
     let r;
@@ -90,8 +92,8 @@ export async function listKeys({ base, tenant } = {}) {
     catch (e) { first ??= e; continue; }
     const j = r.json;
     if (r.status === 200) return (j.AgentAccessKeys ?? []).map(badge);
-    first ??= new Error(`the Agent Registry answered HTTP ${r.status}: ${typeof j === 'string' ? j.slice(0, 120) : (j.message ?? '')}`.trim());
+    answered ??= new Error(`the Agent Registry answered HTTP ${r.status}: ${typeof j === 'string' ? j.slice(0, 120) : (j.message ?? '')}`.trim());
   }
-  throw (first ?? new Error('the Agent Registry was not reachable'));
+  throw (answered ?? first ?? new Error('the Agent Registry was not reachable'));
 }
 

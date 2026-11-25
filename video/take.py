@@ -190,7 +190,7 @@ def main():
                     return { title: t(q('[data-testid="step-detail"] h3')), status: t(q('[data-testid="sdp-status"]')), narrative: t(q('[data-testid="sdp-narrative"]')), decision: t(q('[data-testid="decision"]')) };
                 }""")
                 head = f"{uc} · {info['title']}" + (f" ({info['status']})" if info["status"] and info["status"].lower() != "done" else "")
-                caption(head, info["narrative"][:300] or info["title"], target='[data-testid="sdp-narrative"]', prefer="below", n=i, total=len(frames))
+                caption(head, (info["narrative"] if len(info["narrative"]) <= 300 else info["narrative"][:300].rsplit(" ", 1)[0] + "…") or info["title"], target='[data-testid="sdp-narrative"]', prefer="below", n=i, total=len(frames))
                 # 2. Then the field that matters. Open every collapsed field of the request and response so the values (grant type, scope, tool,
                 #    arguments) are on screen, pick the most telling visible one (the tool and its arguments first, the bare status last) and scroll to it.
                 hot = page.evaluate("""() => {
@@ -297,8 +297,8 @@ def main():
             try: leaks = page.evaluate("() => window.__onscreenMaskLeaks ? window.__onscreenMaskLeaks() : -1")
             except Exception: leaks = -1
             result["mask_leaks"] = leaks; log("on-screen mask check: leaks =", leaks)
-            if leaks != 0: result["ok"] = False; log("WARNING: real values reached the page (or the mask did not load): do not publish this take")
-        result["ok"] = True
+            if leaks != 0: log("WARNING: real values reached the page (or the mask did not load): do not publish this take")
+        result["ok"] = result.get("mask_leaks", 0) == 0   # a take that leaked is never ok
         result["clip"] = clip_window(clip["first"], clip["last"]); log("clip window (s):", result["clip"])
         video = page.video
         ctx.close()

@@ -54,3 +54,9 @@ test('MA5 registry read: when every host fails, the first host\'s error is the o
   // Port 1 on loopback refuses; the fallback host (host.docker.internal) fails differently (or not at all on a Docker-less box).
   await assert.rejects(() => listKeys({ base: 'https://127.0.0.1:1', tenant: TENANT }), /ECONNREFUSED/);
 });
+
+test('MA5 registry read: a console that answers with an HTTP status is reported as that status, not as a connection error', async () => {
+  await withConsole(async (base) => {
+    await assert.rejects(() => listKeys({ base, tenant: '99999999-2222-3333-4444-555555555555' }), /answered HTTP 401/);
+  });
+});

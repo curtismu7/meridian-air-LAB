@@ -374,11 +374,13 @@ describe("review fixes", () => {
     }
   });
 
-  test("lifeline boxes stay clickable but are not extra tab stops", () => {
+  test("the top lifeline box is the keyboard way to an actor (the tile strip is gone); the bottom copy is not an extra tab stop", () => {
     render(<Harness hops={UC1_RUN} />);
-    const boxes = screen.getAllByRole("button", { name: /actor details \((top|bottom)\)/ });
-    expect(boxes.length).toBeGreaterThan(0);
-    for (const b of boxes) expect(b.getAttribute("tabindex")).toBe("-1");
+    const top = screen.getAllByRole("button", { name: /actor details \(top\)/ });
+    const bottom = screen.getAllByRole("button", { name: /actor details \(bottom\)/ });
+    expect(top.length).toBeGreaterThan(0);
+    for (const b of top) expect(b.getAttribute("tabindex")).toBe("0");
+    for (const b of bottom) expect(b.getAttribute("tabindex")).toBe("-1");
   });
 
   test("spec references show their URL as text, reachable without hover", () => {
