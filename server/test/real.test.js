@@ -150,6 +150,18 @@ test('error mapping: 403 DENY with the audit trail, 401 token problem with WWW-A
   }
 });
 
+test('a gateway that gives no answer once is retried, the run completes, and the hop says initialize needed a second attempt', async () => {
+  await withFull(async (url, { gw }) => {
+    await toReal(url); await signIn(url);
+    const r = await run(url, 'MA2', { vertical: 'banking' });
+    const x = r.body.run;
+    assert.equal(r.status, 200); assert.equal(x.outcome, 'REAL_PERMIT');
+    assert.equal(gw.seen.filter((c) => c.rpc.method === 'initialize').length, 2, 'initialize was sent twice: the 503 and the retry');
+    assert.match(x.hops.find((h) => h.kind === 'gateway-check').note, /initialize was answered on attempt 2 \(the earlier ones got no answer\)/);
+    assert.equal(x.hops.filter((h) => h.kind === 'tool-dispatched').length, 1, 'the tool ran exactly once');
+  }, { gateway: 'blip' });
+});
+
 test('a gateway that does not answer at all (connect error) is SE down (after the safe retries)', async () => {
   const p1 = await startFakePingOne();
   const real = createReal({ config: realConfig(fullSettingsFor('http://127.0.0.1:9/mcp'), { MA_LIVE_TEST_BASE: p1.base }), wanted: true });

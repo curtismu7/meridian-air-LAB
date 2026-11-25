@@ -550,9 +550,11 @@ export function createReal({ config = { problem: 'not configured' }, missing = F
     }
     const listed = Array.isArray(list?.rpc?.result?.tools) ? list.rpc.result.tools.filter((t) => t && typeof t.name === 'string').map((t) => t.name.slice(0, 80)).slice(0, 300) : [];
     const firstBad = init.kind !== 'ok' ? init : list && list.kind !== 'ok' ? list : null;
+    // A setup call the gateway answered only on a later attempt (it gave no answer first) is said so on the hop: the retry is never hidden.
+    const retried = [init, list].filter((c) => c?.attempts > 1).map((c) => `${c.method === 'initialize' ? 'initialize' : 'tools/list'} was answered on attempt ${c.attempts} (the earlier ones got no answer)`);
     push({
       kind: 'gateway-check', label: 'Agent Gateway: initialize and tools/list over MCP with the delegated token', from: 'agent', to: 'gateway', verdict: firstBad ? (firstBad.kind === 'hold' ? 'held' : 'deny') : 'ok', traceparent: init.traceparent,
-      note: firstBad ? mapped(firstBad).note : `The gateway accepted the delegated token (X-Token-Validation: jwks) and listed ${listed.length} tools${listed.includes(tool) ? `, including ${tool}` : `; ${tool} is NOT among them`}. No trusted-caller header was sent.`,
+      note: (firstBad ? mapped(firstBad).note : `The gateway accepted the delegated token (X-Token-Validation: jwks) and listed ${listed.length} tools${listed.includes(tool) ? `, including ${tool}` : `; ${tool} is NOT among them`}. No trusted-caller header was sent.`) + (retried.length ? ` ${retried.join('; ')}.` : ''),
       request: { calls: [shownReq(init, { method: 'initialize' }), ...(list ? [shownReq(list, { method: 'notifications/initialized, then tools/list' })] : [])] },
       response: { calls: [shownRes(init, init.rpc?.result ? { serverInfo: init.rpc.result.serverInfo ?? null, protocolVersion: str(init.rpc.result.protocolVersion) } : init.rpc?.error ?? null), ...(list ? [shownRes(list, { tools: listed.length, names: listed.slice(0, 40) })] : [])] },
     });

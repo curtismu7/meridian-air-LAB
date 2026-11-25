@@ -36,6 +36,7 @@ export async function startFakeGateway({ behaviour = 'ok', isDelegated = () => t
       if (req.method !== 'POST' || req.url !== '/mcp' || !rpc) return reply(404, { error: 'not_found' });
       const token = /^Bearer (.+)$/.exec(String(req.headers.authorization || ''))?.[1];
       if (b === 'down' && rpc.method === 'initialize') return reply(503, { error: 'unavailable' });
+      if (b === 'blip' && rpc.method === 'initialize' && !state.blipped) { state.blipped = true; return reply(503, { error: 'unavailable' }); }   // one 503, then it behaves
       if (b === 'token' || !token || !isDelegated(token)) return reply(401, { error: 'invalid_token' }, { 'www-authenticate': 'Bearer error="invalid_token", error_description="fake: not a delegated token"' });
       if (rpc.method !== 'initialize' && req.headers['mcp-session-id'] !== SESSION_ID) return reply(400, { jsonrpc: '2.0', id: rpc.id ?? null, error: { code: -32600, message: 'fake: no session' } });
       if (rpc.method === 'initialize') return reply(200, { jsonrpc: '2.0', id: rpc.id, result: { protocolVersion: '2025-06-18', capabilities: { tools: {} }, serverInfo: { name: 'fake-gateway', version: '0' } } }, { 'mcp-session-id': SESSION_ID });
