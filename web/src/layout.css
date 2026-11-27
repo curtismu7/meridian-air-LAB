@@ -18,6 +18,8 @@
 .shell-more select { width: auto; max-width: 100%; border-radius: 999px; min-height: 34px; padding: 4px 10px; border-style: dashed; }
 .shell-more select[data-current="true"] { border-style: solid; font-weight: 700; }
 .shell-right { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* The shared top menu centres the Sign in / Signed in slot on the bar's top line; here that line is full of nav tabs and the slot sat on top of them. It flows with the right-hand controls instead. */
+.shell-bar .top-menu__signin-slot { position: static; transform: none; }
 .shell-right button { min-height: 34px; padding: 4px 8px; }
 .shell-bar .shell-theme { color: var(--on-box); }
 .shell-bar .seg__note { color: var(--on-box); font-size: 12px; max-width: 22ch; line-height: 1.3; } /* the hosted build: why Real is disabled */

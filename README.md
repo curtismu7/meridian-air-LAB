@@ -108,7 +108,7 @@ Everything in Mock — and Mock is the only mode this repo runs out of the box.
 
 ## Tests
 
-`npm test` runs the server tests (`node --test test/*.test.js`, a glob) and the script tests. The web tests are vitest (`npm test -w web`). `npm run e2e` drives the built app in a real Chromium on the E2E port. `npm run doctor` preflights; Reset (`npm run reset`) clears a workspace's runs (a restart clears them all too) and `npm run smoke` rounds it out.
+`npm test` runs the server tests (`node --test test/*.test.js`, a glob) and the script tests. The web tests are vitest (`npm test -w web`). `npm run e2e` (after `npm run build`) drives the built app in a real Chromium against three loopback labs (mock, hosted, full Real against fakes): the pages, the collapsed-by-default sidebar, the evidence tabs, a Real run, a gateway DENY. `npm run doctor` preflights; Reset (`npm run reset`) clears a workspace's runs (a restart clears them all too) and `npm run smoke` rounds it out.
 
 ## Troubleshooting
 
