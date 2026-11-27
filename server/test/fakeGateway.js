@@ -9,12 +9,15 @@ import http from 'node:http';
 
 export const SESSION_ID = 'fake-mcp-session-0001';
 export const AUDIT_TRAIL = JSON.stringify([{ stage: 'jwt', result: 'pass' }, { stage: 'authorize', decision: 'DENY', reason: 'fake policy' }]);
-const TOOLS = ['get_my_accounts', 'get_account_balance', 'create_transfer', 'get_branch_hours', 'request_fee_waiver', 'view_coverage', 'pay_bill', 'list_orders', 'checkout'];
+// The banking tools the engine tests use, plus the airline tools the Real role remap (cast.js) points the Meridian scenes at (the e2e runs MA2 Real against this fake).
+const TOOLS = ['get_my_accounts', 'get_account_balance', 'create_transfer', 'get_branch_hours', 'request_fee_waiver', 'view_coverage', 'pay_bill', 'list_orders', 'checkout',
+  'get_flight_status', 'get_airline_bookings', 'get_loyalty_status', 'check_seat_availability', 'book_airline_flight', 'cancel_airline_reservation', 'pay_airline_fee'];
 const RESULTS = {
   get_my_accounts: { accounts: [{ id: 'acct-fake-1', accountType: 'CHECKING', balance: 1200.5 }, { id: 'acct-fake-2', accountType: 'SAVINGS', balance: 80 }] },
   get_account_balance: { account_id: 'acct-fake-1', balance: 1200.5, currency: 'USD' },
   view_coverage: { plan: 'Fake Silver', deductible: 500 },
   list_orders: { orders: [{ id: 'o-1' }, { id: 'o-2' }] },
+  get_flight_status: { flightNumber: 'UA502', status: 'On time', route: 'ORD to LHR' },
 };
 
 export async function startFakeGateway({ behaviour = 'ok', isDelegated = () => true } = {}) {

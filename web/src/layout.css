@@ -18,6 +18,8 @@
 .shell-more select { width: auto; max-width: 100%; border-radius: 999px; min-height: 34px; padding: 4px 10px; border-style: dashed; }
 .shell-more select[data-current="true"] { border-style: solid; font-weight: 700; }
 .shell-right { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* The shared top menu centres the Sign in / Signed in slot on the bar's top line; here that line is full of nav tabs and the slot sat on top of them. It flows with the right-hand controls instead. */
+.shell-bar .top-menu__signin-slot { position: static; transform: none; }
 .shell-right button { min-height: 34px; padding: 4px 8px; }
 .shell-bar .shell-theme { color: var(--on-box); }
 .shell-bar .seg__note { color: var(--on-box); font-size: 12px; max-width: 22ch; line-height: 1.3; } /* the hosted build: why Real is disabled */
@@ -84,7 +86,7 @@
 }
 /* the setup handle belongs to an open sidebar only (collapsed, its cell stays but it is invisible) */
 .rail-wrap--collapsed + .col-handle { visibility: hidden; pointer-events: none; }
-@media (max-width: 899px) { .agno > .rail-wrap:not(.rail-wrap--collapsed) { width: 100%; } }
+@media (max-width: 900px) { .agno > .rail-wrap:not(.rail-wrap--collapsed) { width: 100%; } }
 
 /* ===== the Agentic Trust Control Plane rail (the approved mock's right column) ===== */
 .cprail { display: grid; gap: 8px; align-content: start; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -138,7 +140,7 @@
 .turn__refused { color: var(--danger-text); }
 .turn__answer { display: grid; gap: 6px; justify-items: start; }
 .turn__who { margin: 3px 0 0; }
-.turn__working { display: flex; align-items: center; gap: 5px; color: var(--muted); font-style: italic; }
+.turn__working { display: flex; align-items: center; gap: 5px; color: var(--muted); }
 .turn__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: turn-dot 1.2s infinite ease-in-out; }
 .turn__dot:nth-child(2) { animation-delay: 0.2s; }
 .turn__dot:nth-child(3) { animation-delay: 0.4s; }
@@ -162,9 +164,9 @@
 .wtt__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .wtt__group { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--muted); }
 .wtt__chip { min-height: 32px; padding: 3px 10px; border-radius: 999px; font-size: 12px; text-align: left; }
-.wtt select { min-height: 34px; width: 100%; padding: 4px 8px; font-size: 13px; background: #e4e6e8; border: 1px solid var(--border); border-radius: 8px; color: inherit; }
+.wtt select { min-height: 34px; width: 100%; padding: 4px 8px; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; color: inherit; }
 .composer { display: flex; gap: 8px; }
-.composer input { flex: 1 1 auto; min-width: 0; background: #e4e6e8; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: inherit; }
+.composer input { flex: 1 1 auto; min-width: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: inherit; }
 .composer input::placeholder { color: var(--muted); }
 
 /* hand-off card; go deeper (a box in the evidence column) */
@@ -190,7 +192,7 @@ details.evwhy > summary::-webkit-details-marker { display: none; }
 details.evwhy > summary::before { content: "▸"; font-size: 11px; color: var(--text-muted); }
 details.evwhy[open] > summary::before { content: "▾"; }
 details.evwhy > .steps, details.evwhy > .plain, details.evwhy > .muted { margin: 8px 0 0; }
-details.evwhy > .kicker:not(summary .kicker) { margin-top: 12px; }
+.evwhy > .kicker { margin-top: 12px; }
 .evsum__carry { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
 @media (max-width: 900px) { .evsum__carry { grid-template-columns: 1fr; } }
 .evsum__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
