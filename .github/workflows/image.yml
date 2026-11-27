@@ -45,13 +45,13 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
       - name: Smoke the built image in hosted mode before any push
         run: |
-          docker run -d --name cal -p 127.0.0.1:5600:5600 --read-only --tmpfs /tmp -e MA_DEPLOY_MODE=hosted -e ALLOW_MOCK_SIGNIN=1 -e LAB_ALLOWED_HOSTS=meridian-air.lab.example meridian-smoke
+          docker run -d --name cal -p 127.0.0.1:5600:7832 --read-only --tmpfs /tmp -e MA_DEPLOY_MODE=hosted -e ALLOW_MOCK_SIGNIN=1 -e LAB_ALLOWED_HOSTS=meridian-air.lab.example meridian-smoke
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:5600/api/health >/dev/null 2>&1 && break; sleep 1; done
           curl -fsS http://127.0.0.1:5600/api/health | grep -q '"schema":"demo-health/1"'
           curl -fsS http://127.0.0.1:5600/api/info | grep -q '"hosted":true'
           curl -fsS http://127.0.0.1:5600/ | grep -q 'data-state="hosted" data-testid="banner">HOSTED AND SIMULATED'
           curl -fsS -H 'host: meridian-air.lab.example' -H 'x-forwarded-for: 203.0.113.7' -H 'content-type: application/json' -H 'x-workspace: w-smoke' \
-            --data '{"vertical":"banking"}' http://127.0.0.1:5600/api/run/UC1 | grep -q '"hops":\['
+            --data '{"vertical":"airlines"}' http://127.0.0.1:5600/api/run/MA1 | grep -q '"hops":\['
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'host: attacker.example' http://127.0.0.1:5600/api/health)" = 403
           docker logs cal
       - name: Push (main only, after the smoke passed)

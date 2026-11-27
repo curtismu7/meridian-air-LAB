@@ -60,9 +60,9 @@ test('every prompt text, through the chat matcher, selects exactly its declared 
       } else assert.equal(r.kind, 'guided', `${vertical} ${m.uc} is the guided page`);
       n += 1;
     }
-    // the "Opens its own app" group: every one routes Hand off, so the chat answers with the hand-off card
+    // the "Opens its own app" group: every one routes Hand off, so the chat answers with the hand-off card. Meridian Air's 11 scenes all run in the lab (Here / Here + go deeper),
+    // so no prompt hands off and the group is empty (the customer lab this was forked from had hand-offs); any prompt that ever does must still route Hand off.
     const away = list.filter((p) => p.route === 'Hand off');
-    assert.ok(away.length >= 1, `${vertical} has an Opens its own app prompt`);
     for (const p of away) assert.equal(routeOf(p.uc).route, 'Hand off', `${vertical} ${p.uc}`);
   }
   assert.equal(n, 44);

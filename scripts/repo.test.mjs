@@ -44,7 +44,10 @@ test('customer.config.json is git-ignored, and its example only sets the two cas
 
 test('no shipped text names a real customer, company or tenant', () => {
   const skip = new Set(['node_modules', 'dist', '.git', '.data', 'package-lock.json', '.env', 'customer.config.json']); // git-ignored files (local settings: the e2e screenshots are binary; .env holds this Mac's host names)
-  const allowed = { 'docker-compose.yml': ['meridian-air.local.ping-devops.com'], // proxy-served lab host (default LAB_ALLOWED_HOSTS): no real tenant or customer
+  const allowed = { 'docker-compose.yml': ['local.ping-devops.com'], // the shared lab proxy host: the default LAB_ALLOWED_HOSTS (meridian-air.local...) and MA4's extra_hosts entry; no real tenant or customer
+    'server/src/a2a.js': ['local\\.ping-devops\\.com'],   // the A2A endpoint may be the shared lab proxy (the regex that recognises that host)
+    'docs/HANDOFF-2026-11-21.md': ['local.ping-devops.com'],   // the 2026-11-21 handoff names the proxy host it ran behind
+    'video/test_onscreen_mask.py': ['cmuir-gw-lb.corp.invalid', '"cmuir"'],   // fixtures for the on-screen leak detector: made-up values it must catch
     // owner-run setup (2026-11-10): the public Agent Gateway host, its namespace and the lab-proxy callback, exact strings in these files only
     'deploy/k8s-owner/agent-gateway-ingress.yaml': ['agent-gateway.ai-demo.ping-devops.com', 'ping-devops-cmuir'],
     'scripts/owner/agent-gateway-ingress.sh': ['agent-gateway.ai-demo.ping-devops.com', 'ping-devops-cmuir'],
@@ -179,7 +182,10 @@ test('step 3: CI has no self-skipping conformance job (it would be a green check
   assert.ok(pack.glossary.some((g) => g.id === 'live-mode' && /UNVERIFIED/.test(g.definition))); assert.ok(pack.cards.some((c) => c.id === 'concept-live-mode'));
   assert.match(read('docs/talk-track.md'), /## Mock and live/); assert.match(read('docs/talk-track.md'), /UNVERIFIED/);
   const compose = read('docker-compose.yml').replace(/^\s*#.*$/gm, '');
-  assert.ok(!/STANDALONE_ENV|volumes:|env_file/.test(compose), 'no shared settings file, no mount, no env_file (compose.test.mjs pins the exact name list)');
+  // The one allowed mount: the PUBLIC mkcert root CA, read-only, so MA4's Real leg can trust the shared lab proxy's certificate (NODE_EXTRA_CA_CERTS). Nothing else.
+  const CA_MOUNT = /^\s*volumes:\n\s*- \$\{MA_FLEET_CA:-.*\}:\/certs\/mkcert-rootCA\.pem:ro\n/m;
+  assert.ok(CA_MOUNT.test(compose), 'the read-only mkcert CA mount is the compose file\'s only volume');
+  assert.ok(!/STANDALONE_ENV|volumes:|env_file/.test(compose.replace(CA_MOUNT, '')), 'no shared settings file, no other mount, no env_file (compose.test.mjs pins the exact name list)');
   assert.ok(!/^\s+IDP:/m.test(compose)); assert.match(compose, /^\s+MA_ALLOW_LIVE: \$\{MA_ALLOW_LIVE:-\}$/m); assert.match(compose, /^\s+MA_DEPLOY_MODE: local$/m);
   assert.match(read('docs/shelf-entry.json'), /UNVERIFIED/);
 });
@@ -195,7 +201,7 @@ test('step 1 (Agno layout): layout.css follows the CSS standard like app.css (to
   assert.ok(!/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/.test(css), 'no colour literal');
   assert.ok(!/prefers-color-scheme/.test(css)); assert.ok(!/!important/.test(css)); assert.ok(!/font-style:\s*italic/.test(css)); assert.ok(!/purple|violet/i.test(css));
   const widths = [...css.matchAll(/\((?:max|min)-width:\s*(\d+)px\)/g)].map((m) => Number(m[1]));
-  assert.ok(widths.length > 0 && widths.every((n) => n === 600 || n === 900), widths.join());
+  assert.ok(widths.length > 0 && widths.every((n) => n === 600 || n === 900 || n === 1279), widths.join());   // 600 and 900 are the standard's two breakpoints; 1279 is the approved mock's control-plane rail (it flows under the work area below that width)
   for (const sel of css.split('{').map((b) => b.split('}').pop().trim()).filter((x) => x && !x.startsWith('@') && !x.startsWith('/*'))) {
     assert.ok(!/(^|[ ,])(div|span|p|button|input|select)\./.test(sel), `element-qualified class: ${sel.slice(0, 50)}`);
     assert.ok(sel.split(',').every((one) => one.trim().split(/\s+/).length <= 3), `more than three parts: ${sel.slice(0, 60)}`);

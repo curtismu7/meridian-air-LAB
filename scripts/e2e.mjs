@@ -2,7 +2,7 @@
 // Real-browser run of the web UI against the real server, which serves the UI itself (server/src/index.js).
 //
 //   npm run build          (once; the server serves web/dist)
-//   npm run e2e            starts the server on E2E_PORT (default 5690), drives it in Chromium, stops it
+//   npm run e2e            starts the server on E2E_PORT (default 7836: it uses that port and the next three), drives it in Chromium, stops it
 //   E2E_SHOTS=/some/dir    where screenshots go (default .data/e2e-screenshots, git-ignored)
 //
 // Uses the Chromium the installed Playwright resolves (`npx playwright install chromium` if it is missing). The run makes no outbound request: any
@@ -24,7 +24,7 @@ const sleep = (ms) => new Promise((r) => { setTimeout(r, ms); });
 let failures = 0; let checks = 0;
 const check = (ok, what) => { checks += 1; console.log(`${ok ? 'PASS' : 'FAIL'}  ${what}`); if (!ok) failures += 1; };
 
-const port = Number(process.env.E2E_PORT) || 5690;
+const port = Number(process.env.E2E_PORT) || 7836;   // inside 7832-7836; a lab running on 7832 does not collide
 if (port < 7832 || port > 7836) { console.error('E2E_PORT must be inside 7832-7836 (the live, hosted and full-Real instances take the next three ports)'); process.exit(2); }
 const base = `http://127.0.0.1:${port}`;
 if (!fs.existsSync(path.join(root, 'web', 'dist', 'index.html'))) { console.error('Run `npm run build` first.'); process.exit(2); }
