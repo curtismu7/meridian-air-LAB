@@ -24,6 +24,8 @@ One part: sign-in (mock persona), then scenes MA1, MA2, MA7, MA5, MA6, MA4, MA9 
     CUT=detail HEADLESS_REAL=1 APP_URL=http://127.0.0.1:7832 PROFILE=monitor python3 video/take.py <dir>      # -> detail.mp4
     CUT=detail SCENES_ONLY=MA1,MA4 ...                                                                         # a shorter detail cut
 
+**The stills cut (owner, 2026-11-25, hybrid):** `CUT=stills ... python3 video/take.py <dir>` makes the detail video from screenshots of ONE real run instead of a long live recording. The opening (opening slide, sign-in, the first scene's run) stays a short live clip; from the first explained step on, every caption and slide is captured as a still and held for the time the live take would have held it, then ffmpeg joins them (`detail-stills.mp4`, 1920x1080, 25 fps). Same walk, same wording, same masks and leak check as the detail cut; only the capture differs, so a scene is re-made with `SCENES_ONLY=MA4` and no real-time recording, and the file is a fraction of the size. Three scenes: 34 s live + 265 s of 47 stills = 5 min 9 s, 11 MB.
+
 The detail cut has no pop-up: the step-detail panel sits right under the reel, so each step gets (1) a caption on "What happened" with the reel still in view
 (the selected frame is lit), then (2) the page scrolls to the most telling field — the decision, else the tool/arguments, money, scope or grant type, never a
 token or the bare HTTP status — which the lab highlights in warm color, with a caption naming it. All wording comes from the page (the hop's own narrative,
