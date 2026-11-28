@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import App, { BANNER_UNKNOWN, BASE_NAV } from "./App";
+import App, { MODE_LINES, BASE_NAV } from "./App";
 import { forgetWorkspace } from "./workspace";
 import { setJsonView } from "./components/JsonPane";
 import { catalog, mockApi, RAW, runBody } from "./testFixtures";
@@ -15,7 +15,7 @@ const boot = async (state) => {
   const u = userEvent.setup();
   await u.click(screen.getByTestId("nav-agent"));
   await screen.findByTestId("uc-MA1");
-  await waitFor(() => expect(screen.getByTestId("banner").textContent).toMatch(/^SIMULATED, MOCK mode/));
+  await waitFor(() => expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/));
   return view;
 };
 const pick = async (id) => { const u = userEvent.setup(); await u.click(screen.getByTestId(`uc-${id}`)); return u; };
@@ -25,15 +25,55 @@ const runIt = async (u) => { await u.click(screen.getByTestId("run")); await scr
 beforeEach(() => { window.location.hash = ""; window.sessionStorage.clear(); window.localStorage.clear(); forgetWorkspace(); document.documentElement.removeAttribute("data-theme"); setJsonView("raw"); }); // the Form | JSON choice is shared module state: these tests read the JSON text unless they say Form
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe("header, banner and side nav", () => {
-  test("the banner is never blank and does not claim a mode before it knows", async () => {
+describe("header, Real-or-mock modal and side nav", () => {
+  test("the modal never claims a mode before the server says: MOCK with the not-known line, and no banner", async () => {
     api = mockApi(); vi.stubGlobal("fetch", () => new Promise(() => {}));
     render(<App />);
-    expect(screen.getByTestId("banner").textContent).toBe(BANNER_UNKNOWN);
-    expect(BANNER_UNKNOWN).toMatch(/MOCK mode, REAL only in REAL mode/);
+    const modal = screen.getByTestId("mode-modal");
+    expect(modal.getAttribute("data-mode")).toBe("mock");
+    expect(modal.textContent).toMatch(/MOCK/);
+    expect(modal.textContent).toContain(MODE_LINES.unknown);
+    expect(modal.textContent).toMatch(/Real calls the owner's PingOne and the SE Agent Gateway/);
+    expect(screen.queryByTestId("banner")).toBeNull();
   });
 
-  test("the hosted build shows the server's hosted and simulated banner, not the mode banner", async () => {
+  test("the page opens on a MOCK modal that says what is simulated, closes on Got it, and does not come back on a reload in the same session", async () => {
+    api = mockApi(); vi.stubGlobal("fetch", api);
+    const { unmount } = render(<App />);
+    await waitFor(() => expect(screen.getByTestId("mode-modal").textContent).toContain(MODE_LINES.mock));
+    const modal = screen.getByTestId("mode-modal");
+    expect(modal.textContent).toMatch(/MOCK/);
+    expect(modal.textContent).toMatch(/mock engine produces every token, hop and decision offline/);
+    expect(modal.textContent).toMatch(/lab-invented/);
+    expect(modal.textContent).toMatch(/no tenant, gateway or identity provider is touched/);
+    expect(document.querySelector(".banner")).toBeNull();
+    fireEvent.click(screen.getByTestId("mode-modal-ok"));
+    expect(screen.queryByTestId("mode-modal")).toBeNull();
+    unmount();
+    render(<App />);
+    await waitFor(() => expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/));
+    expect(screen.queryByTestId("mode-modal")).toBeNull();
+  });
+
+  test("a Real lab shows MOCK until /api/mode answers, then REAL with the full-Real line", async () => {
+    const inner = mockApi({ live: "allowed", info: { real: { level: "full" } } });
+    let release;
+    const held = new Promise((r) => { release = r; });
+    vi.stubGlobal("fetch", (url, opts) => (String(url).startsWith("/api/mode") && !(opts && opts.method === "POST") ? held.then(() => inner(url, opts)) : inner(url, opts)));
+    render(<App />);
+    expect(screen.getByTestId("mode-modal").getAttribute("data-mode")).toBe("mock");
+    release();
+    const u = userEvent.setup();
+    await waitFor(() => expect(screen.getByTestId("mode").textContent).toMatch(/Mode: /));
+    fireEvent.click(screen.getByTestId("mode-modal-ok"));
+    await u.selectOptions(screen.getByTestId("mode-select"), "real");
+    await waitFor(() => expect(screen.getByTestId("mode-modal").getAttribute("data-mode")).toBe("real"));
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/REAL/);
+    expect(screen.getByTestId("mode-modal").textContent).toContain(MODE_LINES.realFull);
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/HITL approval is always simulated/);
+  });
+
+  test("the hosted build opens on a MOCK modal that says hosted and simulated, and has no banner", async () => {
     const hostedBanner = "HOSTED AND SIMULATED: this is the hosted copy of the lab, mock only.";
     api = mockApi({ info: { hosted: true, hostedBanner } });
     vi.stubGlobal("fetch", api);
@@ -41,8 +81,11 @@ describe("header, banner and side nav", () => {
     const u = userEvent.setup();
     await u.click(screen.getByTestId("nav-agent"));
     await screen.findByTestId("uc-MA1");
-    await waitFor(() => expect(screen.getByTestId("banner").textContent).toBe(hostedBanner));
-    expect(screen.getByTestId("banner").getAttribute("data-state")).toBe("hosted");
+    await waitFor(() => expect(screen.getByTestId("mode-modal").textContent).toContain(MODE_LINES.hosted));
+    expect(screen.getByTestId("mode-modal").getAttribute("data-mode")).toBe("mock");
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/Hosted and simulated/);
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/Real is not available here/);
+    expect(screen.queryByTestId("banner")).toBeNull();
   });
 
   test("header: app name, Mock | Live toggle, mode chip, workspace id, theme picker, Reset, Presenter", async () => {
@@ -226,8 +269,8 @@ describe("run view", () => {
     expect(r.textContent).toMatch(/HTTP 501/);
     expect(r.textContent).toMatch(/data stub/);
     expect(screen.queryByTestId("result")).toBeNull();
-    // the story for a stub is 501 as well: the last good banner stays
-    expect(screen.getByTestId("banner").textContent).toMatch(/^SIMULATED, MOCK mode/);
+    // the story for a stub is 501 as well: the last good story stays, and the page still says Mock
+    expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/);
   });
 
   test("a trigger that is a link in the product is shown as a plain label, never as a link", async () => {
@@ -330,6 +373,7 @@ describe("mode toggle", () => {
   test("hosted: Real is disabled with the note beside it; a click or Enter makes no /api/mode call and shows no error", async () => {
     await bootHosted();
     const u = userEvent.setup();
+    fireEvent.click(screen.getByTestId("mode-modal-ok")); // the Real-or-mock modal is itself a dialog: close it so the "no dialog opened" check below is about the sign-in dialog
     const real = screen.getByTestId("mode-select").querySelector('option[value="real"]');
     expect(real.disabled).toBe(true);
     const note = screen.getByTestId("real-hosted-note");
@@ -378,17 +422,18 @@ describe("mode toggle", () => {
     expect(modePosts()).toHaveLength(0);
     expect(screen.queryByTestId("mode-msg")).toBeNull();
     expect(screen.getByTestId("mode-select").value).toBe("mock");
-    expect(screen.getByTestId("banner").getAttribute("data-state")).toBe("mock");
+    expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/);
   });
 
-  test("when the guards hold, Live is selected, the banner and chip say live, and a run shows real hops, a masked token and the steps it did not run", async () => {
+  test("when the guards hold, Live is selected, the modal and chip say live, and a run shows real hops, a masked token and the steps it did not run", async () => {
     await boot({ live: "allowed" });
     const u = userEvent.setup();
     await u.selectOptions(screen.getByTestId("mode-select"), "real");
     await waitFor(() => expect(screen.getByTestId("mode").textContent).toMatch(/Mode: live/));
     expect(screen.getByTestId("mode").textContent).toMatch(/identity provider only/);
-    expect(screen.getByTestId("banner").textContent).toMatch(/^LIVE mode/);
-    expect(screen.getByTestId("banner").getAttribute("data-state")).toBe("live");
+    await waitFor(() => expect(screen.getByTestId("mode-modal").getAttribute("data-mode")).toBe("real"));
+    expect(screen.getByTestId("mode-modal").textContent).toContain(MODE_LINES.realIdp);
+    expect(screen.getByTestId("mode-modal").textContent).toMatch(/identity provider only/);
     expect(screen.getByTestId("mode-msg").textContent).toMatch(/two real calls to your PingOne environment/);
     await u.click(screen.getByTestId("uc-MA1"));
     expect(screen.getByTestId("live-persona-note")).toBeTruthy();
@@ -463,13 +508,12 @@ describe("theme, presenter, reset", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
 
-  test("Presenter (P) hides the nav, keeps the banner, shows the talk-track line, and Esc leaves it; P is ignored while typing", async () => {
+  test("Presenter (P) hides the nav, shows the talk-track line, and Esc leaves it; P is ignored while typing", async () => {
     await boot();
     const u = userEvent.setup();
     await u.keyboard("p");
     expect(screen.queryByTestId("nav")).toBeNull();
-    expect(screen.getByTestId("banner").textContent).toMatch(/^SIMULATED, MOCK mode/);
-    expect(screen.getByTestId("banner")).toBeVisible();
+    expect(screen.queryByTestId("banner")).toBeNull();
     expect(screen.getByTestId("presenter").getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByTestId("presenter-say").textContent).toMatch(/Start with the question/);
     await u.keyboard("{Escape}");
@@ -480,12 +524,14 @@ describe("theme, presenter, reset", () => {
     expect(screen.getByTestId("search").value).toBe("p");
   });
 
-  test("the banner is on every page", async () => {
+  test("no page carries the old simulation banner, and the mode chip says Mock on every one", async () => {
     await boot();
     const u = userEvent.setup();
     for (const id of ["runs", "diagram", "talk", "agent"]) {
       await u.click(screen.getByTestId(`nav-${id}`));
-      expect(screen.getByTestId("banner").textContent).toMatch(/SIMULATED, MOCK mode/);
+      expect(screen.queryByTestId("banner")).toBeNull();
+      expect(document.querySelector("main > .banner, .app > .banner")).toBeNull();
+      expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/);
     }
   });
 
@@ -633,7 +679,7 @@ describe("fix pass 2026-11-01", () => {
     expect(screen.getByTestId("result").closest("[aria-live]")).toBeNull();
   });
 
-  test("when the API is unreachable the page says so: unknown mode, no loading text, the unknown banner", async () => {
+  test("when the API is unreachable the page says so: unknown mode, no loading text, the not-known modal line", async () => {
     vi.stubGlobal("fetch", () => Promise.reject(new TypeError("Failed to fetch")));
     render(<App />);
     await screen.findByRole("alert");
@@ -646,7 +692,7 @@ describe("fix pass 2026-11-01", () => {
     expect(screen.getByTestId("search-count").textContent).toBe("Use cases unavailable");
     expect(screen.getByTestId("catalog-failed")).toBeTruthy();
     expect(screen.queryByText(/Loading the use cases/)).toBeNull();
-    expect(screen.getByTestId("banner").textContent).toBe(BANNER_UNKNOWN);
+    expect(screen.getByTestId("mode-modal").textContent).toContain(MODE_LINES.unknown);
     expect(screen.getByTestId("mode-select").value).toBe("mock");
   });
 
@@ -669,7 +715,7 @@ describe("fix pass 2026-11-01", () => {
     await u.click(screen.getByTestId("reset"));
     await waitFor(() => expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/));
     expect(screen.getByTestId("mode-select").value).toBe("mock");
-    expect(screen.getByTestId("banner").getAttribute("data-state")).toBe("mock");
+    expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/);
   });
 
   test("a late catalog for a vertical the visitor has left is dropped (W6)", async () => {

@@ -49,6 +49,7 @@ import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
 import "./top-menu/top-menu.css";
 import "./layout.css";
 import "./story/story.css";
+import ModeModal from "./mode-modal/ModeModal.jsx";
 
 // The nav holds the agent's own areas only. An extra page joins the "More" menu beside it when a run of a use case that opens it succeeds, and
 // Reset removes it (one menu, so the shell bar stays one row however many extra pages are open).
@@ -64,8 +65,15 @@ export const BASE_NAV = [
 const EXTRA_PREFIX = "page-";
 // Full-page evidence views of the agent area (#sequence, #reel): the nav keeps Agent selected.
 export const FULL_PAGES = ["sequence", "reel"];
-// The banner is never blank and never claims one mode before it knows: until the story answers it says both, honestly.
-export const BANNER_UNKNOWN = "SIMULATED in MOCK mode, REAL only in REAL mode (loopback only). Mock: an engine produces every token, hop and decision offline. Real: a real sign-in, token exchange and Agent Gateway call to the owner's PingOne and SE, for the use cases SE serves; every hop says REAL or MOCK.";
+// The Real-or-mock modal's lines (it replaced the long simulation banner). It never claims a mode before the server has said which: until /api/mode
+// answers (or if it never does) the modal says MOCK with the "not known" line. Hosted is Mock only and has its own Mock line; Real has a line per level.
+export const MODE_LINES = {
+  unknown: "The server has not said which mode this is, so treat everything as simulated until it does. Mock runs an engine offline; Real calls the owner's PingOne and the SE Agent Gateway.",
+  mock: "Simulated: a mock engine produces every token, hop and decision offline, and the tokens are labelled MOCK. Thresholds, personas and event staging are lab-invented; no tenant, gateway or identity provider is touched.",
+  hosted: "Hosted and simulated: this is the hosted copy, mock only. No tenant, gateway, identity provider or model is reached, and Real is not available here; your runs are kept apart by a workspace id in this browser tab.",
+  realFull: "You sign in for real, and a run gets the agent's token and two token exchanges from your PingOne and calls the SE Agent Gateway, for the use cases the SE server serves. The rest run Mock and say why, every hop says REAL, MOCK or NOT RUN, and the HITL approval is always simulated.",
+  realIdp: "A run makes two real calls to your PingOne (discovery and a client-credentials token, shown masked): identity provider only. Everything after that is simulated.",
+};
 const PRESENTER_TALK = { agent: ["say-first", "tracks", "delegation", "live"], runs: ["honesty"], diagram: ["delegation", "obligations", "attacks"], talk: [], extra: ["obligations", "honesty"] };
 const THEME_KEY = "cal.theme";
 const THEMES = [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]];
@@ -169,7 +177,7 @@ export default function App() {
   useEffect(() => { applyTheme(theme); }, [theme]);
   const setTheme = (t) => { setThemeState(t); try { window.localStorage.setItem(THEME_KEY, t); } catch { /* storage blocked */ } };
 
-  // If the server does not answer, the mode stays unknown (the chip and the banner say so); a mode it never told us is not claimed.
+  // If the server does not answer, the mode stays unknown (the chip and the modal say so); a mode it never told us is not claimed.
   const loadMode = useCallback(() => getJson("/api/mode").then((m) => { setMode(m.mode); setModeFailed(false); setLiveReason(m.live === "allowed" ? null : m.liveReason); }, () => setModeFailed(true)), []);
   useEffect(() => { getJson("/api/info").then(setInfo, (e) => setError(e.message)); loadMode(); }, [loadMode]);
   const realLevel = info?.real?.level ?? null;
@@ -179,7 +187,7 @@ export default function App() {
   const [brainInfo, setBrainInfo] = useState(null);
   useEffect(() => { getJson(`/api/brain${cfg.brain === "llama" ? "?check=1" : ""}`).then(setBrainInfo, () => setBrainInfo({ configured: false, available: false, message: "The server did not answer." })); }, [cfg.brain]);
 
-  // The story (banner, talk track, cast) comes from a full vertical; a stub has none, so the last good story stays.
+  // The story (talk track, cast) comes from a full vertical; a stub has none, so the last good story stays.
   const verticalInfo = info?.verticals.find((v) => v.id === vertical);
   useEffect(() => {
     if (info && verticalInfo?.pack !== "full") return undefined;
@@ -405,9 +413,9 @@ export default function App() {
     document.getElementById(`tab-${next.id}`)?.focus();
   };
 
-  // The hosted build (mock only) has its own banner, from the server: it says hosted and simulated whatever the mode chip shows.
+  // The hosted build (mock only) has its own Mock line: it says hosted and simulated whatever the mode chip shows.
   const hosted = info?.hosted === true && typeof info.hostedBanner === "string";
-  const banner = hosted ? info.hostedBanner : story && mode ? story.banner[mode] : BANNER_UNKNOWN;
+  const modeLines = { mock: hosted ? MODE_LINES.hosted : mode === null ? MODE_LINES.unknown : MODE_LINES.mock, real: realLevel === "full" ? MODE_LINES.realFull : MODE_LINES.realIdp };
   const extraKey = current.startsWith(EXTRA_PREFIX) ? current.slice(EXTRA_PREFIX.length) : null;
   const sayIds = PRESENTER_TALK[extraKey ? "extra" : current] || [];
   const verticalLabel = verticalInfo?.label || vertical;
@@ -462,7 +470,6 @@ export default function App() {
           {/* rule 19: the Real option in the shared TopMenu carries data-testid="mode-real" itself; no alias needed. */}
         </div>
       </header>
-      <p className="banner" role="note" data-state={hosted ? "hosted" : mode === "live" ? "live" : "mock"} data-testid="banner">{banner}</p>
       <div className="statusline">
         <span className="chip" data-testid="mode">Mode: {mode || (modeFailed ? "unknown" : "...")}{mode === "live" ? (realLevel === "full" ? " (real: sign-in, token exchange, Agent Gateway)" : " (real calls, identity provider only)") : mode === "mock" ? " (engine, offline)" : modeFailed ? " (server did not answer)" : ""}</span>
         <span className="chip" data-testid="workspace">Workspace: {workspaceId()}</span>
@@ -535,6 +542,7 @@ export default function App() {
       </main>
       <SignInDialog isOpen={signOpen} username={signin?.username} onClose={() => { setSignOpen(false); pendingRun.current = null; }} onSignedIn={afterSignIn} />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={story?.talkTrack ?? []} />
+      <ModeModal mode={mode === "live" ? "real" : "mock"} lines={modeLines} suppress={storyOn} storageKey="ma-mode" />
     </div>
   );
 }
