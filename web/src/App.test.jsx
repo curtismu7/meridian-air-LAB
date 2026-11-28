@@ -373,6 +373,7 @@ describe("mode toggle", () => {
   test("hosted: Real is disabled with the note beside it; a click or Enter makes no /api/mode call and shows no error", async () => {
     await bootHosted();
     const u = userEvent.setup();
+    fireEvent.click(screen.getByTestId("mode-modal-ok")); // the Real-or-mock modal is itself a dialog: close it so the "no dialog opened" check below is about the sign-in dialog
     const real = screen.getByTestId("mode-select").querySelector('option[value="real"]');
     expect(real.disabled).toBe(true);
     const note = screen.getByTestId("real-hosted-note");
