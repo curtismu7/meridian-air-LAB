@@ -1,6 +1,6 @@
 # Meridian Air LAB
 
-The Airline That Runs on Agents. One day at Meridian Air, told in 11 chat-first scenes: the passenger books through an MCP gateway, the copilot's LLM calls are routed and budgeted, a partner agent from AWS arrives over A2A, an attacker tries prompt injection, a $4,000 refund needs a human, and the auditor asks Elasticsearch for evidence. A simulation: a mock engine produces every token, hop and decision offline. An owner-only Real mode makes real calls to one PingOne environment.
+The Airline That Runs on Agents. One day at AirGuard Airlines, told in 11 chat-first scenes: the passenger books through an MCP gateway, the copilot's LLM calls are routed and budgeted, a partner agent from AWS arrives over A2A, an attacker tries prompt injection, a $4,000 refund needs a human, and the auditor asks Elasticsearch for evidence. A simulation: a mock engine produces every token, hop and decision offline. An owner-only Real mode makes real calls to one PingOne environment.
 
 Tier: Demo
 

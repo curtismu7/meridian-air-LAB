@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Meridian Air \u2014 Privilege in One Demo. The Agentic Trust Control Plane (AI Gateway, PingOne identity, Privilege, Authorize, Governance) told as one day at a fictional airline: 11 chat-first scenes, each started by a named agent, played as movie-reel hops (demo-hop/1). A simulation: a mock engine produces every token, hop and decision offline; an optional local llama.cpp brain picks scenes. No tenant, no outbound network.",
+  "description": "AirGuard Airlines \u2014 Privilege in One Demo. The Agentic Trust Control Plane (AI Gateway, PingOne identity, Privilege, Authorize, Governance) told as one day at a fictional airline: 11 chat-first scenes, each started by a named agent, played as movie-reel hops (demo-hop/1). A simulation: a mock engine produces every token, hop and decision offline; an optional local llama.cpp brain picks scenes. No tenant, no outbound network.",
   "license": "MIT",
   "workspaces": [
     "server",

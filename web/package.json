@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "React + Vite UI for the Meridian Air — Privilege in One Demo. Talks only to its own origin.",
+  "description": "React + Vite UI for the AirGuard Airlines — Privilege in One Demo. Talks only to its own origin.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

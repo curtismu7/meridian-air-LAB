@@ -1,5 +1,5 @@
 <!--
-  All the WORDING for the mock-first Meridian Air recording. Edit the text under each heading — nothing else needs to change.
+  All the WORDING for the mock-first AirGuard Airlines recording. Edit the text under each heading — nothing else needs to change.
   take.py reads this file and fills in the live values (a hop count, a verdict) around whatever you write here; it never
   touches this file itself. SCRIPT.md is the source for every claim below. The heading names are the loader's contract
   ("# Opening Slide" / "# Closing Slide" / "# Slide: <key>" / "# Step: <key>" with "## Title"/"## Text"/"## Lead"/"## Verdict"/
@@ -9,7 +9,7 @@
 # Opening Slide
 
 ## Header
-Meridian Air: agents on a trust plane
+AirGuard Airlines: agents on a trust plane
 
 ## Title
 Agents act on their own. Who watches them?

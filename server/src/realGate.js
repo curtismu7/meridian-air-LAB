@@ -55,7 +55,7 @@ export function realGate(uc, cast, { cibaOk = cibaConfigured(), registryOk = reg
     if (uc.id === 'MA4') return a2aOk ? { real: true, tool: 'request_rebooking' } : { real: false, reason: "the A2A hop needs the partner agent endpoint (fill MA_A2A_URL in the lab's .env)" };
     return { real: false, reason: 'agent-to-agent (A2A) multi-hop runs on the agent-service, which is scaled to 0 on SE' };
   }
-  // The chain decides: the catalog's `needs` list names the products the scene's story touches (every Meridian scene touches Privilege),
+  // The chain decides: the catalog's `needs` list names the products the scene's story touches (every AirGuard Airlines scene touches Privilege),
   // not the hops the engine runs; only a real Privilege-lane hop (credential-swap, id-jag, ...) keeps a use case Mock.
   // MA10 is the one exception (owner, 2026-11-25): its credential-swap chain runs the same delegated-token
   // Real path as MA1 — sign-in, agent token, the two RFC 8693 exchanges, the gateway — and the brokered
@@ -86,7 +86,7 @@ export function toolArgs(tool, { vertical, accounts = [], amount }) {
   const amt = Number.isFinite(amount) ? amount : 25;
   switch (tool) {
     case 'get_account_balance': return { account_id: a0 };
-    case 'create_transfer': return { from_account_id: a0, to_account_id: a1, amount: amt, description: 'Meridian Air — Privilege in One Demo (Real)' };
+    case 'create_transfer': return { from_account_id: a0, to_account_id: a1, amount: amt, description: 'AirGuard Airlines — Privilege in One Demo (Real)' };
     case 'request_fee_waiver': return { account_id: a0, reason: 'Customer request' };
     case 'get_branch_hours': return { vertical };
     case 'pay_bill': case 'checkout': return { amount: amt };
@@ -98,7 +98,7 @@ export function toolArgs(tool, { vertical, accounts = [], amount }) {
     case 'sensitive_airline_bookings': return {};
     // MA6's Real refund: the gateway's catalogue has no refund tool, so the story's refund is realized
     // by cancelling the $4,120 booking (the CIBA obligation trips at this value).
-    case 'cancel_airline_reservation': return { booking_id: 'BK-90412', reason: 'Customer refund request — Meridian Air Privilege in One Demo (Real)' };
+    case 'cancel_airline_reservation': return { booking_id: 'BK-90412', reason: 'Customer refund request — AirGuard Airlines Privilege in One Demo (Real)' };
     default: return {};
   }
 }

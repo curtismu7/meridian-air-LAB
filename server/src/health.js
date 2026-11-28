@@ -7,7 +7,7 @@ import express from 'express';
 import { allPassed, runChecks as defaultChecks } from './doctor.js';
 
 const { version } = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../package.json'), 'utf8'));
-export const DEMO = { id: 'meridian-air-lab', name: 'Meridian Air — Privilege in One Demo', version };
+export const DEMO = { id: 'meridian-air-lab', name: 'AirGuard Airlines — Privilege in One Demo', version };
 
 export function createHealth({ runChecks = defaultChecks, now = () => new Date(), intervalMs = 60_000, runtime = () => 'offline' } = {}) {
   let last = { state: 'unknown', at: null };

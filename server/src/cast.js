@@ -14,7 +14,7 @@ export const TOOL_ROLES = { get_account_balance: 'read', create_transfer: 'write
 
 export const VERTICALS = {
   airlines: {
-    castBrand: 'Meridian Air', castHost: 'meridian-air', castUser: 'emma.hartley', castUser2: 'noah.reyes', castOwner2: 'grace.okafor', castAgent: 'passenger-chat-agent', castAgent2: 'rebooking-specialist', castAgent3: 'rogue-travel-bot',
+    castBrand: 'AirGuard Airlines', castHost: 'airguard', castUser: 'emma.hartley', castUser2: 'noah.reyes', castOwner2: 'grace.okafor', castAgent: 'passenger-chat-agent', castAgent2: 'rebooking-specialist', castAgent3: 'rogue-travel-bot',
     castAdmin: 'priya.nair', castMoney: 'SkyMiles account', castReadTool: 'get_itinerary', castWriteTool: 'issue_refund', castSensitiveTool: 'get_member_profile', castA2aTool: 'request_rebooking',
     castAsset: 'booking', castAction: 'refund', castGroup: 'gold-tier',
   },
@@ -115,7 +115,7 @@ export const toolFor = (cast, tool, { remap = false } = {}) => {
   // remap=true asks for the SE-served tool: the vertical's explicit override when it exists, else the
   // cast's own tool (the banking/health/retail casts name tools the server actually serves).
   if (remap) {
-    const byBrand = Object.entries(REAL_TOOLS).find(([brand]) => brand === cast.castHost || brand === 'airlines' && cast.castBrand === 'Meridian Air');
+    const byBrand = Object.entries(REAL_TOOLS).find(([brand]) => brand === cast.castHost || brand === 'airlines' && cast.castBrand === 'AirGuard Airlines');
     const override = byBrand?.[1]?.[role];
     if (override !== undefined) return override ?? `(no SE tool for the ${role} role)`;
   }

@@ -1,4 +1,4 @@
-# Meridian Air video (standalone lab): one tour of the trust plane, mock cut first
+# AirGuard Airlines video (standalone lab): one tour of the trust plane, mock cut first
 
 Follows the demo family's video standards: `AI-DEMO-Standalone/shared/story/VIDEO.md`.
 Order of work: `SCRIPT.md` (sources first) -> `captions.md` (wording) -> **sample** -> review -> live take.

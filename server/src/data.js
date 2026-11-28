@@ -1,6 +1,6 @@
 // Story data. Every string may carry {{cast}} tokens; cast.js fills them from a vertical pack. A test fails on any token a pack does not define.
 // Labels with the tokens castOutcome, castTitle, castPersona, agentName and again are filled by the engine at run time (see EXTRA_TOKENS).
-export const TITLE = 'Meridian Air — Privilege in One Demo';
+export const TITLE = 'AirGuard Airlines — Privilege in One Demo';
 export const SOURCE_LABEL = 'catalog from the AI-DEMO2 demo (use-case catalog, recorded commit in data/usecases.json)';
 export const EXTRA_TOKENS = ['castOutcome', 'castTitle', 'castPersona', 'agentName', 'again'];
 

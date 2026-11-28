@@ -47,7 +47,7 @@ test('story: the bubbles come in the same order as in take.py, and the scene ord
 test('story (rule 29): the first page the viewer sees names the demo', () => {
   const captions = loadCaptions();
   assert.ok(captions.opening.header && captions.opening.header.length > 3, 'the Opening Slide has a header');
-  assert.equal(captions.opening.header, 'Meridian Air: agents on a trust plane');
+  assert.equal(captions.opening.header, 'AirGuard Airlines: agents on a trust plane');
   const first = STEPS[0];
   assert.equal(first.type, 'slide');
   assert.equal(first.key, 'opening');
