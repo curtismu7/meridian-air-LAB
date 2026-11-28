@@ -47,7 +47,7 @@ describe("header, banner and side nav", () => {
 
   test("header: app name, Mock | Live toggle, mode chip, workspace id, theme picker, Reset, Presenter", async () => {
     await boot();
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Meridian Air — Privilege in One Demo");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("AirGuard Airlines — Privilege in One Demo");
     expect(screen.getByTestId("mode-select").value).toBe("mock");
     expect(screen.getByTestId("mode").textContent).toMatch(/Mode: mock/);
     expect(screen.getByTestId("workspace").textContent).toMatch(/^Workspace: w-[0-9a-f]{16}$/);

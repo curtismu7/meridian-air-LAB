@@ -33,7 +33,7 @@ const routed = (vertical) => {
   const f = c.tracks.find((t) => t.track === "foundations"); f.usecases = [...f.usecases, A2A_UC, HANDOFF_UC]; f.count += 2; c.total += 2;
   return c;
 };
-const STORY_CAST = { castAgent: "passenger-chat-agent", castBrand: "Meridian Air", castUser: "emma.hartley", castUser2: "noah.reyes", castHost: "meridian-air" };
+const STORY_CAST = { castAgent: "passenger-chat-agent", castBrand: "AirGuard Airlines", castUser: "emma.hartley", castUser2: "noah.reyes", castHost: "airguard" };
 function api(state = {}) {
   const inner = mockApi(state);
   const fn = (url, opts = {}) => {
@@ -78,7 +78,7 @@ describe("Agno layout: setup sidebar, agent column, evidence column", () => {
   test("the shell bar holds the app name, the pill nav, Mock | Real, Quick Config, Reset, Presenter and the theme; the banner comes right after it", async () => {
     await boot();
     const bar = document.querySelector(".shell-bar");
-    expect(within(bar).getByRole("heading", { level: 1 }).textContent).toBe("Meridian Air — Privilege in One Demo");
+    expect(within(bar).getByRole("heading", { level: 1 }).textContent).toBe("AirGuard Airlines — Privilege in One Demo");
     for (const id of ["nav", "top-menu", "qc-open", "reset", "presenter", "theme-select"]) expect(within(bar).getByTestId(id)).toBeTruthy();
     expect(bar.nextElementSibling).toBe(screen.getByTestId("banner"));
     expect(screen.getByTestId("banner").getAttribute("role")).toBe("note");
@@ -88,7 +88,7 @@ describe("Agno layout: setup sidebar, agent column, evidence column", () => {
     await boot();
     const side = screen.getByTestId("setup");
     expect(within(side).getByTestId("new-chat")).toBeTruthy();
-    expect(within(side).getByTestId("gateway-status").textContent).toMatch(/gateway\.meridian-air\.example/);
+    expect(within(side).getByTestId("gateway-status").textContent).toMatch(/gateway\.airguard\.example/);
     expect(within(side).getByTestId("mode-one").getAttribute("aria-pressed")).toBe("true");
     expect(within(side).getByTestId("agent-select").value).toBe("passenger-chat-agent");
     const brain = within(side).getByTestId("brain-select");
@@ -114,7 +114,7 @@ describe("What to type and the Scripted brain", () => {
   test("first open shows starter cards and the What to type chips for the vertical; a chip runs its use case and the reply is built from the run", async () => {
     await boot();
     expect(screen.getByTestId("starters")).toBeTruthy();
-    expect(screen.getByTestId("wtt-heading").textContent).toBe("What to type · Airlines · Meridian Air");
+    expect(screen.getByTestId("wtt-heading").textContent).toBe("What to type · Airlines · AirGuard Airlines");
     const groups = within(screen.getByTestId("wtt-select")).getAllByRole("group");
     expect(groups.map((g) => g.label)).toEqual(["Runs here", "Opens its own app"]);
     expect(within(groups[1]).getAllByTestId(/^wtt-/).map((o) => o.textContent)).toEqual(["UC2.6 · simulate an agent identity mismatch"]);

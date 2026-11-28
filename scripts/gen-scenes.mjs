@@ -1,4 +1,4 @@
-// Generates data/usecases.json for the Meridian Air lab: the 11 airline scenes.
+// Generates data/usecases.json for the AirGuard Airlines lab: the 11 airline scenes.
 // Each scene reuses a chain shape proven in the parent engine (same step
 // names, same STEPS handlers) with airline story text. Sources for the security
 // claims: the shared hop catalog (spec refs), the lab's own hop labels.
@@ -216,7 +216,7 @@ const manifest = {
   source: {
     repo: 'meridian-air-LAB',
     file: 'scripts/gen-scenes.mjs',
-    note: '11 airline scenes for the Meridian Air lab. Chain shapes and step names reuse the parent engine (proven hop kinds); story text is the airlines vertical pack. Run scripts/gen-scenes.mjs to regenerate; do not hand-edit.',
+    note: '11 airline scenes for the AirGuard Airlines lab. Chain shapes and step names reuse the parent engine (proven hop kinds); story text is the airlines vertical pack. Run scripts/gen-scenes.mjs to regenerate; do not hand-edit.',
   },
   meta: {
     counts: scenes.reduce((acc, s) => ({ ...acc, [s.track]: (acc[s.track] || 0) + 1 }), {}),

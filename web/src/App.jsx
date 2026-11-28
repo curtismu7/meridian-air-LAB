@@ -420,7 +420,7 @@ export default function App() {
       <header className="shell-bar">
         <div className="shell-brand">
           <span className="shell-logo" aria-hidden="true">P</span>
-          <h1 className="shell-name">Meridian Air — Privilege in One Demo</h1>
+          <h1 className="shell-name">AirGuard Airlines — Privilege in One Demo</h1>
           <span className="shell-badge" data-testid="mode-badge">{mode === "live" ? "Real" : mode === "mock" ? "Mock" : "Mode ?"}</span>
         </div>
         {!presenter && (

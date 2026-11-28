@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Real-browser run of the Meridian Air web UI against the real server, which serves the UI itself (server/src/index.js).
+// Real-browser run of the AirGuard Airlines web UI against the real server, which serves the UI itself (server/src/index.js).
 //
 //   npm run build          (once; the server serves web/dist)
 //   npm run e2e            starts three lab instances on E2E_PORT, +1, +2 (default 7860, any port in 7800-7997), drives them in Chromium, stops them
 //   E2E_SHOTS=/some/dir    where screenshots go (default .data/e2e-screenshots, git-ignored)
 //
-// Rewritten for Meridian Air (2026-11-27): the script this replaced was inherited from the customer lab (its use-case ids, its Run/Result controls, its
+// Rewritten for AirGuard Airlines (2026-11-27): the script this replaced was inherited from the customer lab (its use-case ids, its Run/Result controls, its
 // pages) and had never passed here. This one drives the chat-first UI as it is: the Chat page, the Agent detail page with the collapsed-by-default setup
 // sidebar (the shared Rail) and the evidence column (Sequence and Movie reel), run history, the diagram, the talk track, the hosted build, and full Real
 // against the fakes (sign-in through the modal, a Real run, a gateway DENY, back to Mock).
@@ -191,7 +191,7 @@ try {
     check((await t('signin-password').getAttribute('type')) === 'password', `${tag}: the password field is a password field`);
     await t('signin-password').fill(DEMO_PASSWORD); await t('signin-submit').click();
     await page.getByText('Signed in', { exact: false }).first().waitFor({ timeout: 30000 });
-    // The shared top menu centres the signed-in slot on the bar's top line; Meridian's nav tabs live there too, so nothing may overlap them.
+    // The shared top menu centres the signed-in slot on the bar's top line; the nav tabs live there too, so nothing may overlap them.
     const overlap = await page.evaluate(() => {
       const slot = document.querySelector('.top-menu__signin-slot').getBoundingClientRect();
       return [...document.querySelectorAll('[data-testid="nav"] button')].filter((b) => { const r = b.getBoundingClientRect(); return r.width && r.left < slot.right && r.right > slot.left && r.top < slot.bottom && r.bottom > slot.top; }).map((b) => b.textContent.trim());

@@ -158,7 +158,7 @@ test('step 2: the Dockerfile builds the web app in its own stage and copies only
   assert.equal((d.match(/^FROM node:26-alpine/gm) || []).length, 2); assert.match(d, /^USER node$/m);
 });
 
-test('review fix: package.json describes the 11 Meridian scenes, not the old catalog', () => {
+test('review fix: package.json describes the 11 airline scenes, not the old catalog', () => {
   const d = JSON.parse(read('package.json')).description;
   assert.match(d, /11 chat-first scenes/); assert.ok(!/87 use cases/i.test(d));
 });

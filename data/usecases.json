@@ -3,7 +3,7 @@
   "source": {
     "repo": "meridian-air-LAB",
     "file": "scripts/gen-scenes.mjs",
-    "note": "11 airline scenes for the Meridian Air lab. Chain shapes and step names reuse the parent engine (proven hop kinds); story text is the airlines vertical pack. Run scripts/gen-scenes.mjs to regenerate; do not hand-edit."
+    "note": "11 airline scenes for the AirGuard Airlines lab. Chain shapes and step names reuse the parent engine (proven hop kinds); story text is the airlines vertical pack. Run scripts/gen-scenes.mjs to regenerate; do not hand-edit."
   },
   "meta": {
     "counts": {
@@ -16,7 +16,7 @@
       "demo": 2
     },
     "total": 11,
-    "generated": "2026-11-21"
+    "generated": "2026-11-28"
   },
   "usecases": [
     {

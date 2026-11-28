@@ -1,4 +1,4 @@
-# Script: Meridian Air — the Agentic Trust Control Plane in one demo (mock-first cut)
+# Script: AirGuard Airlines — the Agentic Trust Control Plane in one demo (mock-first cut)
 
 Written first, per the video standards (2026-11-23). This is the SAMPLE cut: the whole tour recorded against the lab's mock engine, labelled SAMPLE, reviewed for wording and pacing before any live Real-mode take. The Real cut(s) follow once the sample is approved, one per profile (monitor / laptop).
 

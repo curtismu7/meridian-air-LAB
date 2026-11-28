@@ -27,14 +27,14 @@ export const catalog = (vertical = "airlines") => ({
 });
 export const INFO = {
   mode: "mock", modes: ["mock", "live"], simulated: true, total: 11, counts: {}, personas: ["standard", "premium"],
-  verticals: [{ id: "airlines", label: "Meridian Air", pack: "full" }, { id: "banking", label: "Fabrikam Bank", pack: "full" }, { id: "healthcare", label: "Contoso Health", pack: "full" }, { id: "retail", label: "Northwind Retail", pack: "full" }, { id: "government", label: "Government", pack: "stub" }],
+  verticals: [{ id: "airlines", label: "AirGuard Airlines", pack: "full" }, { id: "banking", label: "Fabrikam Bank", pack: "full" }, { id: "healthcare", label: "Contoso Health", pack: "full" }, { id: "retail", label: "Northwind Retail", pack: "full" }, { id: "government", label: "Government", pack: "stub" }],
 };
 export const STORY = {
-  title: "Meridian Air — Privilege in One Demo",
+  title: "AirGuard Airlines — Privilege in One Demo",
   banner: { mock: "SIMULATED, MOCK mode: a mock engine produces every token, hop and decision offline.", live: "LIVE mode (the owner's opt-in): a run makes two real calls to your PingOne environment and nothing else." },
-  cast: { castAgent: "passenger-chat-agent", castBrand: "Meridian Air", castUser: "emma.hartley", castUser2: "noah.reyes", castHost: "meridian-air" },
+  cast: { castAgent: "passenger-chat-agent", castBrand: "AirGuard Airlines", castUser: "emma.hartley", castUser2: "noah.reyes", castHost: "airguard" },
   talkTrack: [
-    { id: "say-first", title: "Start with the question", say: "Meridian Air has a passenger chat agent." },
+    { id: "say-first", title: "Start with the question", say: "AirGuard Airlines has a passenger chat agent." },
     { id: "tracks", title: "Seven tracks", say: "Pick any one and run it." },
     { id: "delegation", title: "Delegation, not impersonation", say: "The act claim names the agent." },
     { id: "obligations", title: "Step-up and human approval", say: "A small refund goes through." },
@@ -46,7 +46,7 @@ const hop = (n, kind, over = {}) => ({ n, kind, label: `Hop ${n} ${kind}`, from:
 
 // The Story wording (GET /api/captions): the shape the shared parser returns, minimal but real.
 export const CAPTIONS = {
-  opening: { title: "Agents act on their own.", lead: "A trust plane.", verdict: "Simulated.", header: "Meridian Air: agents on a trust plane",
+  opening: { title: "Agents act on their own.", lead: "A trust plane.", verdict: "Simulated.", header: "AirGuard Airlines: agents on a trust plane",
     colA: { heading: "The obvious way", lines: ["keys everywhere"] }, colB: { heading: "A trust plane", lines: ["one door"] }, image: null, wide: false },
   closing: { title: "One trust plane.", lead: "The same record.", verdict: "The end.",
     colA: { heading: "What the run showed", lines: ["hops on screen"] }, colB: { heading: "Next", lines: ["real mode"] }, image: null, wide: false },

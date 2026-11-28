@@ -6,7 +6,7 @@
 export const BANDS = {
   money: [{ min: 2000, decision: 'DENY' }, { min: 500, decision: 'STEP_UP' }, { min: 200, decision: 'HITL_REQUIRED' }, { min: 100, decision: 'CIBA' }],
   booking: [{ min: 250, decision: 'HITL_REQUIRED' }],
-  // Meridian Air: refunds over $2,000 require a human via CIBA (the story's MA6 threshold).
+  // AirGuard Airlines: refunds over $2,000 require a human via CIBA (the story's MA6 threshold).
   refund: [{ min: 2000, decision: 'CIBA' }],
 };
 export const BOOKING_TOOLS = new Set(['book_airline_flight']);

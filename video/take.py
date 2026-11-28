@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Meridian Air mock-first take, on the shared Story code: opens the lab (default http://127.0.0.1:7832), walks the video's scene tour (take.py's
+"""The AirGuard Airlines mock-first take, on the shared Story code: opens the lab (default http://127.0.0.1:7832), walks the video's scene tour (take.py's
 SCENES) with numbered captions drawn by the shared overlay and held for the shared formulas, and the two full-screen slides. SAMPLE=1 is the default cut
 the standards require first (a SAMPLE pill on screen, mock only); REHEARSE=1 runs it fast with no recording; HEADLESS_REAL=1 records the Real-mode cut
 (sign-in included, refuses without it).

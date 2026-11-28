@@ -12,7 +12,7 @@
 //   public    a public catalog call that needs no token
 //   chain     a lab-derived chain for use cases whose catalog evidence chain is empty
 export const SITUATIONS = {
-  // Meridian Air scenes. Refund threshold 2000 (MA6's story), rate-limit burst for MA3,
+  // AirGuard Airlines scenes. Refund threshold 2000 (MA6's story), rate-limit burst for MA3,
   // gold persona for MA8's tier gate, marker argument for MA11's ES search.
   MA1: { amount: 0, args: { flight: 'MER 114', seat: '12A' } },
   MA2: { amount: 0, args: { query: 'DEN crosswind advisory' } },

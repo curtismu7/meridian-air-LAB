@@ -6,7 +6,7 @@
 
 ## Start with the question
 
-Meridian Air has a customer-facing agent, passenger-chat-agent. A customer, emma.hartley, can ask it for a balance or for a transfer. The question is not whether the agent is clever: it is whether anyone can prove who allowed each thing it did.
+AirGuard Airlines has a customer-facing agent, passenger-chat-agent. A customer, emma.hartley, can ask it for a balance or for a transfer. The question is not whether the agent is clever: it is whether anyone can prove who allowed each thing it did.
 
 ## Seven tracks, 11 scenes
 
