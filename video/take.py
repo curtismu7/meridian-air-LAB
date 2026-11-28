@@ -126,6 +126,8 @@ def main():
         ctx.add_init_script("window.__cmScale = " + json.dumps(SCALE) + ";")
         ctx.add_init_script("window.__pillText = " + json.dumps("SAMPLE: simulated stand-in, not a live run" if SAMPLE and not HEADLESS_REAL else None) + ";")
         ctx.add_init_script(overlay_script())
+        # The Real-or-mock modal would cover the take: pre-dismiss it for both modes (the lab's storageKey is "ma-mode").
+        ctx.add_init_script("try { sessionStorage.setItem('ma-mode-seen-mock', '1'); sessionStorage.setItem('ma-mode-seen-real', '1'); } catch (e) {}")
         # The take's own bubble sizing (owner 2026-11-25): smaller caption bubbles than the shared overlay's default,
         # so more of the app shows through. Only width and font; placement logic still measures the drawn bubble.
         ctx.add_init_script("""

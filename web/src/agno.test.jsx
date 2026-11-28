@@ -75,13 +75,14 @@ beforeEach(() => { window.location.hash = ""; window.sessionStorage.clear(); win
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); window.history.replaceState(null, "", "/"); });
 
 describe("Agno layout: setup sidebar, agent column, evidence column", () => {
-  test("the shell bar holds the app name, the pill nav, Mock | Real, Quick Config, Reset, Presenter and the theme; the banner comes right after it", async () => {
+  test("the shell bar holds the app name, the pill nav, Mock | Real, Quick Config, Reset, Presenter and the theme; no simulation banner follows it", async () => {
     await boot();
     const bar = document.querySelector(".shell-bar");
     expect(within(bar).getByRole("heading", { level: 1 }).textContent).toBe("Meridian Air — Privilege in One Demo");
     for (const id of ["nav", "top-menu", "qc-open", "reset", "presenter", "theme-select"]) expect(within(bar).getByTestId(id)).toBeTruthy();
-    expect(bar.nextElementSibling).toBe(screen.getByTestId("banner"));
-    expect(screen.getByTestId("banner").getAttribute("role")).toBe("note");
+    expect(screen.queryByTestId("banner")).toBeNull();
+    expect(bar.nextElementSibling.getAttribute("data-testid")).not.toBe("banner");
+    expect(bar.nextElementSibling.matches(".banner")).toBe(false);
   });
 
   test("the sidebar has New chat, the gateway line, One agent | Several, agent, brain (llama.cpp off when not configured), vertical, the use cases with route tags, and sessions", async () => {

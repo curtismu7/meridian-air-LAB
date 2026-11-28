@@ -72,8 +72,10 @@ try {
   const VIEWPORTS = [[1280, 900, 'desktop'], [375, 800, 'phone']];
 
   // A page with the watchers every block needs: requests to another origin, page errors, console errors (the deliberate 403/409/501 refusals excepted).
-  async function open(origin, { width, height, scheme }) {
+  // The Real-or-mock modal covers the page on a fresh session, so a context starts with it dismissed for both modes unless the block tests the modal itself.
+  async function open(origin, { width, height, scheme, predismiss = true }) {
     const ctx = await browser.newContext({ viewport: { width, height }, colorScheme: scheme });
+    if (predismiss) await ctx.addInitScript(() => { try { sessionStorage.setItem('ma-mode-seen-mock', '1'); sessionStorage.setItem('ma-mode-seen-real', '1'); } catch { /* blocked */ } });
     const page = await ctx.newPage();
     const seen = { external: [], errors: [] };
     page.on('request', (r) => { if (!r.url().startsWith(origin) && !/^(data|blob):/.test(r.url())) seen.external.push(r.url()); });
@@ -95,10 +97,16 @@ try {
   for (const [width, height, name] of VIEWPORTS) {
     for (const scheme of ['light', 'dark']) {
       const tag = `mock-${name}-${scheme}`;
-      const { ctx, page, seen, t, overflow } = await open(base, { width, height, scheme });
+      const { ctx, page, seen, t, overflow } = await open(base, { width, height, scheme, predismiss: false });
       await t('wtt-select').waitFor();
-      await page.waitForFunction(() => document.querySelector('[data-testid="banner"]').textContent.startsWith('SIMULATED, MOCK mode'), null, { timeout: 60000 }).catch(() => {});
-      check((await t('banner').innerText()).startsWith('SIMULATED, MOCK mode'), `${tag}: the banner says SIMULATED, MOCK mode`);
+      // the modal covers a fresh session: MOCK with the Mock line (not the "server has not said" line), no banner; Got it closes it and a reload in the same session does not bring it back
+      await page.waitForFunction(() => document.querySelector('[data-testid="mode-modal"]')?.textContent.includes('mock engine produces every token'), null, { timeout: 60000 }).catch(() => {});
+      check((await t('mode-modal').getAttribute('data-mode')) === 'mock' && (await t('mode-modal').innerText()).includes('MOCK') && (await t('banner').count()) === 0, `${tag}: the page opens on the MOCK modal and has no banner`);
+      check(await page.evaluate(() => { const r = document.querySelector('[data-testid="mode-modal"]').getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - innerWidth / 2) < 2 && r.left >= 0 && r.right <= innerWidth; }), `${tag}: the modal is centred and fits the ${width}px viewport`);
+      await t('mode-modal-ok').click();
+      check((await t('mode-modal').count()) === 0, `${tag}: Got it closes the modal`);
+      await page.reload(); await t('wtt-select').waitFor();
+      check((await t('mode-modal').count()) === 0 && (await t('banner').count()) === 0, `${tag}: a reload in the same session shows neither the modal nor a banner`);
       check((await t('mode').innerText()).includes('Mode: mock'), `${tag}: the header shows Mode: mock`);
       check(/^Workspace: w-[0-9a-f]{16}$/.test(await t('workspace').innerText()), `${tag}: the header shows the workspace id`);
       check((await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) === null, `${tag}: Auto theme sets no data-theme`);
@@ -158,12 +166,14 @@ try {
   for (const [width, height, name] of VIEWPORTS) {
     for (const scheme of ['light', 'dark']) {
       const tag = `hosted-${name}-${scheme}`;
-      const { ctx, page, seen, t, overflow } = await open(hostedBase, { width, height, scheme });
+      const { ctx, page, seen, t, overflow } = await open(hostedBase, { width, height, scheme, predismiss: false });
       const modeCalls = []; let watch = false;
       page.on('request', (r) => { if (watch && new URL(r.url()).pathname === '/api/mode') modeCalls.push(`${r.method()} ${r.url()}`); });
       await t('wtt-select').waitFor();
       await page.waitForFunction(() => document.querySelector('[data-testid="mode-real"]')?.disabled === true);
-      check((await t('banner').innerText()).startsWith('HOSTED AND SIMULATED'), `${tag}: the banner says HOSTED AND SIMULATED`);
+      await page.waitForFunction(() => document.querySelector('[data-testid="mode-modal"]')?.textContent.includes('Hosted and simulated'), null, { timeout: 60000 }).catch(() => {});
+      check((await t('mode-modal').getAttribute('data-mode')) === 'mock' && (await t('mode-modal').innerText()).includes('Hosted and simulated') && (await t('banner').count()) === 0, `${tag}: the modal says MOCK, hosted and simulated, and the page has no banner`);
+      await t('mode-modal-ok').click();
       check(await t('real-hosted-note').isVisible() && (await t('real-hosted-note').innerText()) === 'Mock only on the hosted copy. Run the lab locally for Real.', `${tag}: the note beside Real is shown`);
       watch = true;
       await t('mode-select').selectOption('real').catch(() => {});
@@ -227,7 +237,7 @@ try {
     await page.waitForFunction(() => document.querySelector('[data-testid="mode"]').textContent.includes('Mode: mock'));
     const gwBefore = fullGw.seen.length;
     await t('nav-chat').click(); await say(t, page, 'MA1');
-    check((await t('banner').getAttribute('data-state')) === 'mock' && fullGw.seen.length === gwBefore, `${tag}: back in Mock without a restart: a run makes no call to the gateway`);
+    check((await t('mode').innerText()).includes('Mode: mock') && (await t('banner').count()) === 0 && fullGw.seen.length === gwBefore, `${tag}: back in Mock without a restart: a run makes no call to the gateway`);
     check(seen.external.length === 0, `${tag}: the browser made no request to another origin (${seen.external.length})`);
     check(seen.errors.length === 0, `${tag}: no console error (${seen.errors.slice(0, 2).join(' | ')})`);
     await ctx.close();
